@@ -291,9 +291,10 @@ function telaMesa(){
   }
   $("corpo").innerHTML=h;
   $("barra").classList.remove("oculto");
-  $("barra").innerHTML=`${c?`<button class="btn" id="bFechar">Fechar conta</button>`:""}<button class="btn pri" id="bAdd">+ Adicionar itens</button>`;
+  $("barra").innerHTML=`${c?`<button class="btn" id="bConta" style="flex:.6">🖨️ Conta</button><button class="btn" id="bFechar">Fechar conta</button>`:""}<button class="btn pri" id="bAdd">+ Adicionar itens</button>`;
   $("bAdd").onclick=()=>{ tela={nome:"cardapio",mesa:n}; secAtiva=null; busca=""; render(); window.scrollTo(0,0); };
   if(c) $("bFechar").onclick=()=>fecharConta(c);
+  if(c) $("bConta").onclick=()=>contaParaImprimir(c);
   $("corpo").onclick=async e=>{
     const b=e.target.closest("[data-c]"); if(!b) return;
     if(b.dataset.c==="confirmar"||b.dataset.c==="recusar"){
@@ -437,6 +438,29 @@ async function enviar(){
   await carregarMesas(); tela={nome:"mesa",mesa:tela.mesa}; render(); window.scrollTo(0,0);
 }
 
+let RESTINFO=null;
+async function contaParaImprimir(c){
+  if(!RESTINFO){ const {data}=await sb.from("restaurante").select("slogan,telefone,endereco,pix_chave,pix_nome").eq("id",1).maybeSingle(); RESTINFO=data||{}; }
+  const sub=subtotal(c);
+  abrirFolha(`<h2>Imprimir conta · Mesa ${c.mesa}</h2><div class="sub">Consumo ${brl(sub)}</div>
+    <label class="linha" style="align-items:center;cursor:pointer"><span>Incluir taxa de serviço (10%)</span><input type="checkbox" id="pTaxa" checked style="width:22px;height:22px"></label>
+    <label class="linha" style="align-items:center;cursor:pointer"><span>Dividir a conta</span><select id="pDiv" class="t" style="width:auto;padding:6px">${[1,2,3,4,5,6,8,10].map(n=>`<option value="${n}">${n===1?"não":n+" pessoas"}</option>`).join("")}</select></label>
+    <div style="margin:10px 0">${escolherPapelHtml()}</div>
+    <p class="dica" style="font-size:13px;color:var(--sub)">Funciona com impressora ligada a este aparelho (Wi-Fi/AirPrint, ou app da impressora térmica no Android).</p>
+    <button class="btn pri bloco" id="pImp">🖨️ Imprimir</button>`,f=>{
+      f.querySelector("#pImp").onclick=()=>{
+        const taxa=f.querySelector("#pTaxa").checked?Math.round(sub*10)/100:0, div=+f.querySelector("#pDiv").value, tot=sub+taxa;
+        const itens=c.pedidos.filter(p=>p.status!=="aguardando").flatMap(p=>p.pedido_itens).filter(i=>!i.cancelado);
+        // agrupa itens iguais
+        const ag=[]; itens.forEach(i=>{ const k=i.nome+"|"+(i.rotulo||"")+"|"+i.preco; const x=ag.find(y=>y.k===k); if(x) x.qtd+=i.qtd; else ag.push({k,qtd:i.qtd,nome:i.nome,rotulo:i.rotulo,preco:i.preco}); });
+        const linhas=[["Consumo",brl(sub)]]; if(taxa) linhas.push(["Serviço (10%) opcional",brl(taxa)]);
+        const rod=[]; if(div>1) rod.push(`Dividido por ${div}: ${brl(tot/div)} cada`);
+        if(RESTINFO.pix_chave) rod.push("Pix: "+RESTINFO.pix_chave);
+        imprimirConta({titulo:"CONTA · MESA "+c.mesa,sub:[`Garçom: ${EU.nome}`,"Aberta às "+new Date(c.aberta_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})],itens:ag,linhas,total:tot,rodape:rod,rest:RESTINFO});
+        fecharFolha();
+      };
+    });
+}
 function fecharConta(c){
   let taxa=false, forma=null;
   const sub=subtotal(c);
@@ -461,6 +485,49 @@ function fecharConta(c){
   };
   desenhar();
 }
+
+/* ---------- impressão de conta (não fiscal) ---------- */
+const K_PAPEL="senorx_papel";
+function papel(){ try{ return localStorage.getItem(K_PAPEL)||"80"; }catch(e){ return "80"; } }
+function setPapel(v){ try{ localStorage.setItem(K_PAPEL,v); }catch(e){} }
+function imprimirConta(o){
+  // o = {titulo, sub, itens:[{qtd,nome,rotulo,obs,preco}], linhas:[[rotulo,valor]], total, rodape:[...], rest:{...}}
+  const W=papel(), mm=W==="58"?48:72, fonte=W==="58"?11:12.5, A4=W==="a4";
+  const f=v=>"R$ "+(+v||0).toFixed(2).replace(".",",");
+  const e=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const r=o.rest||{}, agora=new Date();
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Conta</title><style>
+    @page{size:${A4?"A4":W+"mm auto"};margin:${A4?"15mm":"0"}}
+    *{box-sizing:border-box} body{margin:0;font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:${fonte}px;line-height:1.35}
+    .t{width:${A4?"90mm":mm+"mm"};margin:${A4?"0 auto":"0 "+((+W-mm)/2)+"mm"};padding:${A4?"6mm":"3mm 0 8mm"};${A4?"border:1px dashed #999":""}}
+    .c{text-align:center} .b{font-weight:bold} .g{font-size:1.5em;font-weight:bold;letter-spacing:.05em}
+    hr{border:0;border-top:1px dashed #000;margin:2mm 0}
+    .l{display:flex;justify-content:space-between;gap:2mm} .l span:first-child{flex:1}
+    .it{margin:1mm 0} .ob{font-size:.9em;padding-left:4mm}
+    .tot{font-size:1.3em;font-weight:bold}
+  </style></head><body><div class="t">
+    <div class="c g">SEÑOR X</div>
+    ${r.slogan?`<div class="c">${e(r.slogan)}</div>`:""}
+    ${r.endereco?`<div class="c">${e(r.endereco)}</div>`:""}
+    ${r.telefone?`<div class="c">${e(r.telefone)}</div>`:""}
+    <hr><div class="c b" style="font-size:1.2em">${e(o.titulo)}</div>
+    ${o.sub?`<div class="c">${o.sub.map(e).join("<br>")}</div>`:""}
+    <div class="c">${agora.toLocaleDateString("pt-BR")} ${agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
+    <hr>
+    ${o.itens.map(i=>`<div class="it"><div class="l"><span>${i.qtd}x ${e(i.nome)}${i.rotulo?" ("+e(i.rotulo)+")":""}</span><span>${f(i.preco*i.qtd)}</span></div>${i.obs?`<div class="ob">${e(i.obs)}</div>`:""}</div>`).join("")}
+    <hr>
+    ${(o.linhas||[]).map(([a,b])=>`<div class="l"><span>${e(a)}</span><span>${e(b)}</span></div>`).join("")}
+    <div class="l tot"><span>TOTAL</span><span>${f(o.total)}</span></div>
+    ${(o.rodape||[]).length?`<hr>${o.rodape.map(x=>`<div class="c">${e(x)}</div>`).join("")}`:""}
+    <hr><div class="c b">NÃO É DOCUMENTO FISCAL</div><div class="c">Obrigado pela preferência!</div>
+  </div><script>window.onload=()=>{setTimeout(()=>{window.print();},150)};window.onafterprint=()=>{parent.postMessage("impresso","*")};<\/script></body></html>`;
+  let fr=document.getElementById("frImpressao");
+  if(fr) fr.remove();
+  fr=document.createElement("iframe"); fr.id="frImpressao"; fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(fr); fr.srcdoc=html;
+}
+function escolherPapelHtml(){ const p=papel(); return `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px"><span>Papel da impressora:</span>${[["80","Térmica 80mm"],["58","Térmica 58mm"],["a4","Comum (A4)"]].map(([v,n])=>`<button type="button" data-papel="${v}" style="border:1px solid #ccc;border-radius:16px;padding:5px 10px;background:${p===v?"#1B1512":"#fff"};color:${p===v?"#fff":"#222"};cursor:pointer">${n}</button>`).join("")}</div>`; }
+document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-papel]"); if(!b) return; setPapel(b.dataset.papel); b.parentElement.querySelectorAll("[data-papel]").forEach(x=>{ const on=x===b; x.style.background=on?"#1B1512":"#fff"; x.style.color=on?"#fff":"#222"; }); });
 
 /* ---------- início ---------- */
 (async()=>{

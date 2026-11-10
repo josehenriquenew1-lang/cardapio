@@ -655,6 +655,7 @@ function renderDelivery(){
     else if(c.etapa==="aceito") acoes=ent?`<button class="btn pri" data-d="saiu" style="flex:2">🛵 Saiu para entrega</button>`:`<button class="btn pri" data-d="entregue" style="flex:2">✓ Cliente retirou</button>`;
     else if(c.etapa==="saiu") acoes=`<button class="btn pri" data-d="entregue" style="flex:2">✓ Entregue</button>`;
     if(c.forma_pagamento==="pix"&&c.pagamento_status!=="pago") acoes+=`<button class="btn" data-d="pago">Pix recebido</button>`;
+    acoes+=`<button class="btn" data-d="imprimir" title="Imprimir comanda">🖨️</button>`;
     if(c.etapa!=="recebido") acoes+=`<button class="btn perigo" data-d="cancelarAbrir">Cancelar</button>`;
     return `<div class="promo" data-c="${c.id}" style="${c.etapa==="recebido"?"border:2px solid var(--laranja);background:#fff8f1":""}">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -681,6 +682,7 @@ function renderDelivery(){
     ${novos.length?`<h3 style="margin:14px 2px 8px">🔔 Aguardando confirmação (${novos.length})</h3>${novos.map(card).join("")}`:""}
     <h3 style="margin:14px 2px 8px">Em andamento (${andamento.length})</h3>
     ${andamento.map(card).join("")||`<div class="vazio" style="padding:14px">Nenhum pedido em andamento.</div>`}
+    <div class="promo">${escolherPapelHtml()}</div>
     <details style="margin-top:16px" ${BAIRROS.length&&R.pix_chave?"":"open"}><summary style="font-weight:700;cursor:pointer;padding:6px 2px">⚙️ Configurações do delivery</summary>
       <div class="promo" style="margin-top:8px">
         <label class="l" style="display:flex;align-items:center;gap:10px">Fazer entregas <label class="sw"><input type="checkbox" data-df="delivery_ativo"${R.delivery_ativo!==false?" checked":""}><span></span></label></label>
@@ -715,6 +717,7 @@ $("abaDelivery").addEventListener("click",async e=>{
   const id=b.closest("[data-c]").dataset.c, ac=b.dataset.d;
   if(ac==="cancelarAbrir"){ cancelando=id; renderDelivery(); const m=$("motivoCanc"); m&&m.focus(); return; }
   if(ac==="cancelarFechar"){ cancelando=null; renderDelivery(); return; }
+  if(ac==="imprimir"){ const c=DEL.find(x=>x.id===id); imprimirComanda(c); return; }
   b.disabled=true;
   const {error}=await sb.rpc("acao_delivery",{p_comanda:id,p_acao:ac,p_motivo:ac==="cancelar"?($("motivoCanc").value.trim()||null):null});
   if(error){ b.disabled=false; status(erroMsg(error),true); return; }
@@ -790,7 +793,7 @@ $("abaInd").addEventListener("click",e=>{ const b=e.target.closest("[data-p]"); 
 $("abaInd").addEventListener("input",e=>{ const k=e.target.dataset.mf; if(!k) return; const v=parseInt(e.target.value)||1; salvarDepois("restaurante",1,{[k]:v}); });
 
 /* ---------- vendas ---------- */
-let diaVendas=null;
+let diaVendas=null, ABERTAS_V=[];
 function hojeISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 async function carregarVendas(){
   diaVendas=diaVendas||hojeISO();
@@ -799,11 +802,12 @@ async function carregarVendas(){
   const ini=new Date(diaVendas+"T06:00:00"), fim=new Date(ini.getTime()+86400000);
   const [fech,abert]=await Promise.all([
     sb.from("comandas").select("*").eq("status","fechada").gte("fechada_em",ini.toISOString()).lt("fechada_em",fim.toISOString()).order("fechada_em",{ascending:false}),
-    sb.from("comandas").select("*, pedido_itens(preco,qtd,cancelado)").eq("status","aberta").order("mesa")
+    sb.from("comandas").select("*, pedidos(id,status), pedido_itens(nome,rotulo,obs,preco,qtd,cancelado,pedido_id)").eq("status","aberta").order("mesa")
   ]);
   if(fech.error){ $("vCorpo").innerHTML=`<div class="vazio">${esc(erroMsg(fech.error))}</div>`; return; }
   const L=fech.data, porForma={}; let tot=0, taxa=0;
   L.forEach(c=>{ porForma[c.forma_pagamento||"—"]=(porForma[c.forma_pagamento||"—"]||0)+(+c.total||0); tot+=+c.total||0; taxa+=+c.taxa_servico||0; });
+  ABERTAS_V=(abert.data||[]);
   const ab=(abert.data||[]).map(c=>({...c,parcial:(c.pedido_itens||[]).filter(i=>!i.cancelado).reduce((s,i)=>s+i.preco*i.qtd,0)}));
   const hora=s=>new Date(s).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
   $("vCorpo").className=""; $("vCorpo").innerHTML=`
@@ -812,11 +816,72 @@ async function carregarVendas(){
       ${taxa?`<div class="dica">inclui ${brl(taxa)} de taxa de serviço</div>`:""}
       <div style="margin-top:10px">${Object.entries(porForma).map(([f,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #f0ebe4"><span>${esc(f)}</span><b>${brl(v)}</b></div>`).join("")}</div>
     </div>
-    ${ab.length?`<div class="promo"><b>Abertas agora (mesas e delivery)</b>${ab.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${rotuloComanda(c)} · desde ${hora(c.aberta_em)}</span><b>${brl(c.parcial)}</b></div>`).join("")}</div>`:""}
+    ${ab.length?`<div class="promo"><b>Abertas agora (mesas e delivery)</b>${ab.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${rotuloComanda(c)} · desde ${hora(c.aberta_em)}</span><span style="display:flex;gap:8px;align-items:center"><b>${brl(c.parcial)}</b><button class="btn" style="padding:5px 9px" data-imp="${c.id}">🖨️</button></span></div>`).join("")}<div style="margin-top:10px">${escolherPapelHtml()}</div></div>`:""}
     <div class="promo"><b>Contas fechadas</b>${L.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${hora(c.fechada_em)} · ${rotuloComanda(c)} · ${esc(c.forma_pagamento||"")}</span><b>${brl(c.total)}</b></div>`).join("")||`<p class="dica">Nenhuma conta fechada neste dia.</p>`}</div>`;
 }
 $("abaVendas").addEventListener("change",e=>{ if(e.target.id==="vDia"){ diaVendas=e.target.value; carregarVendas(); } });
-$("abaVendas").addEventListener("click",e=>{ if(e.target.id==="vAtual") carregarVendas(); });
+function imprimirComanda(c,itensSrc){
+  const itens=(itensSrc||c.pedido_itens||[]).filter(i=>!i.cancelado);
+  const ag=[]; itens.forEach(i=>{ const k=i.nome+"|"+(i.rotulo||"")+"|"+i.preco+"|"+(c.tipo==="mesa"?"":(i.obs||"")); const x=ag.find(y=>y.k===k); if(x) x.qtd+=i.qtd; else ag.push({k,qtd:i.qtd,nome:i.nome,rotulo:i.rotulo,preco:i.preco,obs:c.tipo==="mesa"?"":i.obs}); });
+  const sub=ag.reduce((s,i)=>s+i.preco*i.qtd,0);
+  if(c.tipo==="mesa"){
+    const taxa=Math.round(sub*10)/100;
+    imprimirConta({titulo:"CONTA · MESA "+c.mesa,sub:["Aberta às "+new Date(c.aberta_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})],itens:ag,linhas:[["Consumo",brl(sub)],["Serviço (10%) opcional",brl(taxa)]],total:sub+taxa,rodape:REST.pix_chave?["Pix: "+REST.pix_chave]:[],rest:REST});
+  } else {
+    const tx=+c.taxa_entrega||0, tot=sub+tx, ent=c.tipo==="delivery";
+    const PG={pix:"Pix",dinheiro:"Dinheiro",cartao:"Cartão"};
+    const rod=[`Pagamento: ${PG[c.forma_pagamento]||c.forma_pagamento||""}${c.pagamento_status==="pago"?" (PAGO)":""}`];
+    if(c.troco_para) rod.push(`Troco para ${brl(c.troco_para)}: levar ${brl(c.troco_para-tot)}`);
+    if(c.obs_cliente) rod.push("Obs: "+c.obs_cliente);
+    imprimirConta({titulo:(ent?"ENTREGA":"RETIRADA")+" · "+(c.codigo||""),sub:[c.cliente_nome||"",c.cliente_telefone||"",...(ent?[c.endereco||"",c.bairro_nome||""]:[])].filter(Boolean),
+      itens:ag,linhas:[["Subtotal",brl(sub)],...(ent?[["Entrega",brl(tx)]]:[])],total:tot,rodape:rod,rest:REST});
+  }
+}
+$("abaVendas").addEventListener("click",e=>{
+  const bi=e.target.closest("[data-imp]"); if(bi){ const c=ABERTAS_V.find(x=>x.id===bi.dataset.imp); if(c){ const pend=new Set((c.pedidos||[]).filter(p=>p.status==="aguardando").map(p=>p.id)); imprimirComanda(c,(c.pedido_itens||[]).filter(i=>!pend.has(i.pedido_id))); } return; } if(e.target.id==="vAtual") carregarVendas(); });
+
+/* ---------- impressão de conta (não fiscal) ---------- */
+const K_PAPEL="senorx_papel";
+function papel(){ try{ return localStorage.getItem(K_PAPEL)||"80"; }catch(e){ return "80"; } }
+function setPapel(v){ try{ localStorage.setItem(K_PAPEL,v); }catch(e){} }
+function imprimirConta(o){
+  // o = {titulo, sub, itens:[{qtd,nome,rotulo,obs,preco}], linhas:[[rotulo,valor]], total, rodape:[...], rest:{...}}
+  const W=papel(), mm=W==="58"?48:72, fonte=W==="58"?11:12.5, A4=W==="a4";
+  const f=v=>"R$ "+(+v||0).toFixed(2).replace(".",",");
+  const e=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const r=o.rest||{}, agora=new Date();
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Conta</title><style>
+    @page{size:${A4?"A4":W+"mm auto"};margin:${A4?"15mm":"0"}}
+    *{box-sizing:border-box} body{margin:0;font-family:"Courier New",ui-monospace,monospace;color:#000;font-size:${fonte}px;line-height:1.35}
+    .t{width:${A4?"90mm":mm+"mm"};margin:${A4?"0 auto":"0 "+((+W-mm)/2)+"mm"};padding:${A4?"6mm":"3mm 0 8mm"};${A4?"border:1px dashed #999":""}}
+    .c{text-align:center} .b{font-weight:bold} .g{font-size:1.5em;font-weight:bold;letter-spacing:.05em}
+    hr{border:0;border-top:1px dashed #000;margin:2mm 0}
+    .l{display:flex;justify-content:space-between;gap:2mm} .l span:first-child{flex:1}
+    .it{margin:1mm 0} .ob{font-size:.9em;padding-left:4mm}
+    .tot{font-size:1.3em;font-weight:bold}
+  </style></head><body><div class="t">
+    <div class="c g">SEÑOR X</div>
+    ${r.slogan?`<div class="c">${e(r.slogan)}</div>`:""}
+    ${r.endereco?`<div class="c">${e(r.endereco)}</div>`:""}
+    ${r.telefone?`<div class="c">${e(r.telefone)}</div>`:""}
+    <hr><div class="c b" style="font-size:1.2em">${e(o.titulo)}</div>
+    ${o.sub?`<div class="c">${o.sub.map(e).join("<br>")}</div>`:""}
+    <div class="c">${agora.toLocaleDateString("pt-BR")} ${agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
+    <hr>
+    ${o.itens.map(i=>`<div class="it"><div class="l"><span>${i.qtd}x ${e(i.nome)}${i.rotulo?" ("+e(i.rotulo)+")":""}</span><span>${f(i.preco*i.qtd)}</span></div>${i.obs?`<div class="ob">${e(i.obs)}</div>`:""}</div>`).join("")}
+    <hr>
+    ${(o.linhas||[]).map(([a,b])=>`<div class="l"><span>${e(a)}</span><span>${e(b)}</span></div>`).join("")}
+    <div class="l tot"><span>TOTAL</span><span>${f(o.total)}</span></div>
+    ${(o.rodape||[]).length?`<hr>${o.rodape.map(x=>`<div class="c">${e(x)}</div>`).join("")}`:""}
+    <hr><div class="c b">NÃO É DOCUMENTO FISCAL</div><div class="c">Obrigado pela preferência!</div>
+  </div><script>window.onload=()=>{setTimeout(()=>{window.print();},150)};window.onafterprint=()=>{parent.postMessage("impresso","*")};<\/script></body></html>`;
+  let fr=document.getElementById("frImpressao");
+  if(fr) fr.remove();
+  fr=document.createElement("iframe"); fr.id="frImpressao"; fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(fr); fr.srcdoc=html;
+}
+function escolherPapelHtml(){ const p=papel(); return `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px"><span>Papel da impressora:</span>${[["80","Térmica 80mm"],["58","Térmica 58mm"],["a4","Comum (A4)"]].map(([v,n])=>`<button type="button" data-papel="${v}" style="border:1px solid #ccc;border-radius:16px;padding:5px 10px;background:${p===v?"#1B1512":"#fff"};color:${p===v?"#fff":"#222"};cursor:pointer">${n}</button>`).join("")}</div>`; }
+document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-papel]"); if(!b) return; setPapel(b.dataset.papel); b.parentElement.querySelectorAll("[data-papel]").forEach(x=>{ const on=x===b; x.style.background=on?"#1B1512":"#fff"; x.style.color=on?"#fff":"#222"; }); });
 
 /* ---------- início ---------- */
 (async()=>{
