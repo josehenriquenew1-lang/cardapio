@@ -39,6 +39,7 @@ button,input,select{font:inherit;color:inherit}
 .topo .mini{background:none;border:1px solid var(--borda);border-radius:8px;padding:6px 10px;color:var(--sub);cursor:pointer;font-size:13px}
 /* colunas */
 .quadro{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;height:calc(100vh - 58px);padding:12px}
+#avisoSite[style*="flex"]+.quadro{height:calc(100vh - 58px - 74px)}
 .col{display:flex;flex-direction:column;min-height:0;background:#18120f;border-radius:14px;border:1px solid #2a201b}
 .col h2{margin:0;padding:12px 14px;font-size:15px;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px;border-bottom:1px solid #2a201b}
 .col h2 .n{background:#2d231e;border-radius:20px;padding:2px 10px;font-size:14px;letter-spacing:0}
@@ -97,6 +98,7 @@ button,input,select{font:inherit;color:inherit}
     <span class="relogio" id="relogio"></span>
     <button class="mini" id="bSair">Sair</button>
   </header>
+  <div id="avisoSite" style="display:none;margin:12px 12px 0;background:#4a3520;border:2px solid #ff9c55;border-radius:12px;padding:12px 16px;font-size:18px;font-weight:700;align-items:center;gap:12px"></div>
   <div class="quadro">
     <section class="col novo"><h2>Novos <span class="n" id="nNovo">0</span></h2><div class="lista" id="lNovo"></div></section>
     <section class="col preparo"><h2>Em preparo <span class="n" id="nPrep">0</span></h2><div class="lista" id="lPrep"></div></section>
@@ -117,7 +119,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:t
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let setor="cozinha"; try{ setor=localStorage.getItem("senorx_setor")||"cozinha"; }catch(e){}
-let PED=[], conhecidos=null, audio=null, wake=null;
+let PED=[], conhecidos=null, audio=null, wake=null; const vistosSite=new Set(); let siteIniciado=false;
 
 function mostrar(id){ ["tLogin","tApp"].forEach(x=>$(x).classList.toggle("oculto",x!==id)); }
 $("fLogin").addEventListener("submit",async e=>{
@@ -156,14 +158,22 @@ async function carregar(){
   conhecidos=new Set([...(conhecidos||[]),...data.map(p=>p.id)]);
   PED=data; desenhar(chegaram);
   if(chegaram.length) bip();
+  // pedidos do site ainda não aceitos
+  const {data:ag}=await sb.from("comandas").select("id,codigo,tipo,cliente_nome,aberta_em").in("tipo",["delivery","retirada"]).eq("etapa","recebido").eq("status","aberta").order("aberta_em");
+  const box=$("avisoSite");
+  if(ag&&ag.length){
+    const novosSite=ag.filter(x=>!vistosSite.has(x.id)); ag.forEach(x=>vistosSite.add(x.id)); if(novosSite.length&&siteIniciado) bip(); siteIniciado=true;
+    box.style.display="flex";
+    box.innerHTML=`<span style="flex:1">🔔 ${ag.length} pedido${ag.length>1?"s":""} do site aguardando confirmação: ${ag.map(x=>(x.tipo==="delivery"?"🛵 ":"🏃 ")+esc(x.cliente_nome)).join(", ")}</span>${ag.map(x=>`<button class="btn pri" data-aceitar="${x.id}">Aceitar ${esc(x.codigo)}</button>`).join("")}`;
+  } else { box.style.display="none"; siteIniciado=true; }
 }
 const minutos=iso=>(Date.now()-new Date(iso))/60000;
 const cron=iso=>{ const s=Math.max(0,Math.floor((Date.now()-new Date(iso))/1000)); const m=Math.floor(s/60); return m>=60?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):m+":"+String(s%60).padStart(2,"0"); };
 function card(p,novoAgora){
   const m=minutos(p.criado_em), cls=p.status==="pronto"?"":(m>=ATRASO_MIN?"atraso":m>=ALERTA_MIN?"alerta":"");
   return `<div class="ped ${cls}${novoAgora?" novoAgora":""}" data-p="${p.id}">
-    <div class="h"><span class="mesa">Mesa ${p.mesa}</span><span class="num">#${p.numero}</span>${setor==="todos"?`<span class="dest">${p.destino==="bar"?"🍹 bar":"🍳 cozinha"}</span>`:""}<span class="esp"></span><span class="tempo" data-t="${p.criado_em}">${p.status==="pronto"?"✓":cron(p.criado_em)}</span></div>
-    <div class="quem">${esc(p.garcom_nome||"")} · ${new Date(p.criado_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
+    <div class="h"><span class="mesa">${p.tipo==="delivery"?"🛵 "+esc(p.cliente_nome||"Delivery"):p.tipo==="retirada"?"🏃 "+esc(p.cliente_nome||"Retirada"):"Mesa "+p.mesa}</span><span class="num">#${p.numero}</span>${setor==="todos"?`<span class="dest">${p.destino==="bar"?"🍹 bar":"🍳 cozinha"}</span>`:""}<span class="esp"></span><span class="tempo" data-t="${p.criado_em}">${p.status==="pronto"?"✓":cron(p.criado_em)}</span></div>
+    <div class="quem">${p.tipo==="delivery"?"<b style=\"color:#ff9c55\">DELIVERY</b> · ":p.tipo==="retirada"?"<b style=\"color:#ff9c55\">RETIRADA NO BALCÃO</b> · ":""}${esc(p.garcom_nome||"")} · ${new Date(p.criado_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
     ${p.pedido_itens.map(i=>`<div class="it${i.cancelado?" canc":""}"><b>${i.qtd}×</b><span>${esc(i.nome)}${i.rotulo?` <span class="r">${esc(i.rotulo)}</span>`:""}${i.cancelado?' <span class="r">(cancelado)</span>':""}${i.obs?`<span class="ob">${esc(i.obs)}</span>`:""}</span></div>`).join("")}
     ${p.status==="novo"?`<button class="acao comecar" data-a="preparo">Começar preparo</button>`:""}
     ${p.status==="preparo"?`<button class="acao pronto" data-a="pronto">PRONTO ✓</button><button class="voltar" data-a="novo">voltar para novos</button>`:""}
@@ -179,6 +189,11 @@ function desenhar(chegaram=[]){
   $("lPronto").innerHTML=prontos.map(p=>card(p)).join("")||`<div class="vazio">Os pedidos prontos aparecem aqui por ${PRONTOS_POR_MIN} min</div>`;
   $("nNovo").textContent=por("novo").length; $("nPrep").textContent=por("preparo").length; $("nPronto").textContent=prontos.length;
 }
+$("avisoSite").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-aceitar]"); if(!b) return; b.disabled=true; b.textContent="Aceitando…";
+  const {error}=await sb.rpc("acao_delivery",{p_comanda:b.dataset.aceitar,p_acao:"aceitar"});
+  if(error){ b.disabled=false; b.textContent="Tentar de novo"; return; } carregar();
+});
 document.querySelector(".quadro").addEventListener("click",async e=>{
   const b=e.target.closest("[data-a]"); if(!b) return;
   const id=b.closest("[data-p]").dataset.p, st=b.dataset.a;
@@ -195,6 +210,7 @@ function ligar(){
   canal=sb.channel("cozinha")
     .on("postgres_changes",{event:"*",schema:"public",table:"pedidos"},recarregar)
     .on("postgres_changes",{event:"*",schema:"public",table:"pedido_itens"},recarregar)
+    .on("postgres_changes",{event:"*",schema:"public",table:"comandas"},recarregar)
     .subscribe(s=>$("cx").classList.toggle("off",s!=="SUBSCRIBED"));
 }
 setInterval(carregar,15000);

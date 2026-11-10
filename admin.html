@@ -138,6 +138,7 @@ textarea.t{resize:vertical;min-height:44px}
     </div>
     <nav class="abas" id="abas">
       <button data-a="cardapio" class="on">Cardápio</button>
+      <button data-a="delivery">Delivery <span id="badgeDel" class="pill" style="display:none;background:#e0533f;color:#fff;margin-left:4px"></span></button>
       <button data-a="promos">Promoções</button>
       <button data-a="vendas">Vendas</button>
       <button data-a="equipe">Equipe e mesas</button>
@@ -149,6 +150,7 @@ textarea.t{resize:vertical;min-height:44px}
       <div class="busca"><input class="t" id="busca" type="search" placeholder="Buscar item… (ex: brasil, coca)"></div>
       <div id="listaSecoes"><div class="carregando">Carregando…</div></div>
     </div>
+    <div id="abaDelivery" class="oculto"></div>
     <div id="abaPromos" class="oculto"></div>
     <div id="abaVendas" class="oculto"></div>
     <div id="abaEquipe" class="oculto"></div>
@@ -243,7 +245,7 @@ async function carregarTudo(){
   if(a.error){ $("listaSecoes").innerHTML=`<div class="vazio">${esc(erroMsg(a.error))}<br><br><button class="btn" onclick="carregarTudo()">Tentar de novo</button></div>`; return; }
   SEC=a.data.map(s=>({...s,itens:(s.itens||[]).sort((x,y)=>x.ordem-y.ordem)}));
   PROMOS=b.data||[]; REST=c.data||{id:1};
-  renderSecoes(); renderPromos(); renderRest(); renderEquipe(); carregarUsuarios();
+  renderSecoes(); renderPromos(); renderRest(); renderEquipe(); carregarUsuarios(); iniciarDelivery();
 }
 
 /* salvamento com espera (para não salvar a cada letra) */
@@ -265,9 +267,10 @@ window.addEventListener("beforeunload",e=>{ if(pend.size){ e.preventDefault(); e
 $("abas").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return;
   document.querySelectorAll("#abas button").forEach(x=>x.classList.toggle("on",x===b));
-  const mapa={cardapio:"abaCardapio",promos:"abaPromos",vendas:"abaVendas",equipe:"abaEquipe",rest:"abaRest"};
+  const mapa={cardapio:"abaCardapio",delivery:"abaDelivery",promos:"abaPromos",vendas:"abaVendas",equipe:"abaEquipe",rest:"abaRest"};
   Object.entries(mapa).forEach(([k,id])=>$(id).classList.toggle("oculto",b.dataset.a!==k));
   if(b.dataset.a==="vendas") carregarVendas();
+  if(b.dataset.a==="delivery") carregarDelivery();
   window.scrollTo(0,0);
 });
 
@@ -576,6 +579,131 @@ $("abaEquipe").addEventListener("click",async e=>{
   }
 });
 
+/* ---------- delivery ---------- */
+const rotuloComanda=c=>c.tipo==="delivery"?"🛵 "+esc(c.cliente_nome||"Delivery"):c.tipo==="retirada"?"🏃 "+esc(c.cliente_nome||"Retirada"):"Mesa "+c.mesa;
+let DEL=[], BAIRROS=[], delVistos=null, audioDel=null, cancelando=null;
+const PAG={pix:"Pix",dinheiro:"Dinheiro",cartao:"Cartão na entrega"};
+function bipDel(){ try{ audioDel=audioDel||new (window.AudioContext||window.webkitAudioContext)(); [0,.25,.5].forEach(t=>{ const o=audioDel.createOscillator(),g=audioDel.createGain(); o.connect(g); g.connect(audioDel.destination); o.frequency.value=988; const s=audioDel.currentTime+t; g.gain.setValueAtTime(.001,s); g.gain.exponentialRampToValueAtTime(.35,s+.02); g.gain.exponentialRampToValueAtTime(.001,s+.2); o.start(s); o.stop(s+.22); }); }catch(e){} }
+document.addEventListener("click",()=>{ if(!audioDel){ try{ audioDel=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } },{once:true});
+async function carregarDelivery(){
+  const [a,b]=await Promise.all([
+    sb.from("comandas").select("*, pedidos(id,destino,status), pedido_itens(nome,rotulo,qtd,preco,obs,cancelado)").in("tipo",["delivery","retirada"]).eq("status","aberta").order("aberta_em"),
+    sb.from("bairros").select("*").order("ordem").order("nome")
+  ]);
+  if(a.error){ $("abaDelivery").innerHTML=`<div class="vazio">${esc(erroMsg(a.error))}</div>`; return; }
+  DEL=a.data||[]; BAIRROS=b.data||[];
+  const novos=DEL.filter(c=>c.etapa==="recebido").map(c=>c.id);
+  if(delVistos && novos.some(id=>!delVistos.has(id))){ bipDel(); status("🛵 Novo pedido pelo site!",false,5000); try{ navigator.vibrate&&navigator.vibrate([300,100,300]); }catch(e){} }
+  delVistos=new Set([...(delVistos||[]),...novos]);
+  const bd=$("badgeDel"); bd.style.display=novos.length?"":"none"; bd.textContent=novos.length;
+  renderDelivery();
+}
+let canalDel=null;
+function iniciarDelivery(){
+  carregarDelivery();
+  if(canalDel) return;
+  try{ canalDel=sb.channel("painel-delivery").on("postgres_changes",{event:"*",schema:"public",table:"comandas"},()=>{ clearTimeout(iniciarDelivery.t); iniciarDelivery.t=setTimeout(carregarDelivery,400); })
+    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"pedidos"},()=>{ clearTimeout(iniciarDelivery.t); iniciarDelivery.t=setTimeout(carregarDelivery,400); }).subscribe(); }catch(e){}
+  setInterval(()=>{ if(document.visibilityState==="visible") carregarDelivery(); },25000);
+}
+function situacaoCozinha(c){
+  const ps=(c.pedidos||[]).filter(p=>p.status!=="cancelado");
+  if(!ps.length) return "";
+  if(ps.every(p=>p.status==="aguardando")) return "";
+  if(ps.every(p=>["pronto","entregue"].includes(p.status))) return `<span class="pill" style="background:#d6f0d8;color:#1d5c22">✓ Pronto</span>`;
+  if(ps.some(p=>p.status==="preparo"||p.status==="pronto")) return `<span class="pill">Em preparo</span>`;
+  return `<span class="pill cinza">Na fila da cozinha</span>`;
+}
+function renderDelivery(){
+  const R=REST, hora=s=>new Date(s).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  const minutos=s=>Math.floor((Date.now()-new Date(s))/60000);
+  const card=c=>{
+    const its=(c.pedido_itens||[]).filter(i=>!i.cancelado), sub=its.reduce((s,i)=>s+i.preco*i.qtd,0), tot=sub+(+c.taxa_entrega||0);
+    const tel=String(c.cliente_telefone||""), telF=tel.length>=10?`(${tel.slice(0,2)}) ${tel.slice(2,tel.length-4)}-${tel.slice(-4)}`:tel;
+    const ent=c.tipo==="delivery";
+    let acoes="";
+    if(c.etapa==="recebido") acoes=`<button class="btn pri" data-d="aceitar" style="flex:2">✓ Aceitar pedido</button><button class="btn perigo" data-d="cancelarAbrir">Recusar</button>`;
+    else if(c.etapa==="aceito") acoes=ent?`<button class="btn pri" data-d="saiu" style="flex:2">🛵 Saiu para entrega</button>`:`<button class="btn pri" data-d="entregue" style="flex:2">✓ Cliente retirou</button>`;
+    else if(c.etapa==="saiu") acoes=`<button class="btn pri" data-d="entregue" style="flex:2">✓ Entregue</button>`;
+    if(c.forma_pagamento==="pix"&&c.pagamento_status!=="pago") acoes+=`<button class="btn" data-d="pago">Pix recebido</button>`;
+    if(c.etapa!=="recebido") acoes+=`<button class="btn perigo" data-d="cancelarAbrir">Cancelar</button>`;
+    return `<div class="promo" data-c="${c.id}" style="${c.etapa==="recebido"?"border:2px solid var(--laranja);background:#fff8f1":""}">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <b style="font-size:17px">${ent?"🛵 Entrega":"🏃 Retirada"} · ${esc(c.codigo||"")}</b>
+        ${c.etapa==="recebido"?'<span class="pill" style="background:#e0533f;color:#fff">NOVO</span>':""}${situacaoCozinha(c)}
+        <span style="flex:1"></span><span class="dica" style="margin:0">${hora(c.aberta_em)} · há ${minutos(c.aberta_em)} min</span>
+      </div>
+      <div style="margin-top:8px"><b>${esc(c.cliente_nome)}</b> · <a href="https://wa.me/55${esc(tel)}" target="_blank" rel="noopener">${esc(telF)}</a></div>
+      ${ent?`<div class="dica" style="color:var(--txt);font-size:14px">📍 ${esc(c.endereco||"")} · <b>${esc(c.bairro_nome||"")}</b></div>`:""}
+      <div style="margin:8px 0;border-top:1px solid #f0ebe4;padding-top:6px">${its.map(i=>`<div style="display:flex;gap:8px;padding:3px 0"><b style="min-width:26px">${i.qtd}×</b><span style="flex:1">${esc(i.nome)}${i.rotulo?" ("+esc(i.rotulo)+")":""}${i.obs?`<br><span style="color:#a35a00;font-size:13px">${esc(i.obs)}</span>`:""}</span><span>${brl(i.preco*i.qtd)}</span></div>`).join("")}</div>
+      ${c.obs_cliente?`<div class="dica" style="background:#fff4e5;color:#7a4a12;border-radius:8px;padding:6px 8px">💬 ${esc(c.obs_cliente)}</div>`:""}
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:14px"><span>Subtotal ${brl(sub)}${ent?` + entrega ${brl(c.taxa_entrega)}`:""}</span><b style="font-size:17px">${brl(tot)}</b></div>
+      <div class="dica" style="margin-top:4px;color:var(--txt)">💳 ${PAG[c.forma_pagamento]||esc(c.forma_pagamento||"")}${c.troco_para?` · <b>troco para ${brl(c.troco_para)}</b> (levar ${brl(c.troco_para-tot)})`:""}${c.forma_pagamento==="pix"?(c.pagamento_status==="pago"?' · <b style="color:var(--ok)">Pix confirmado ✓</b>':' · <b style="color:var(--erro)">Pix ainda não confirmado</b>'):""}</div>
+      ${cancelando===c.id?`<div style="margin-top:10px"><label class="l">Motivo (o cliente vê)</label><input class="t" id="motivoCanc" placeholder="Ex: fora da área de entrega, item acabou"><div class="acoes"><button class="btn perigo confirmar" data-d="cancelar">Confirmar cancelamento</button><button class="btn" data-d="cancelarFechar">Voltar</button></div></div>`:`<div class="acoes">${acoes}</div>`}
+    </div>`;
+  };
+  const novos=DEL.filter(c=>c.etapa==="recebido"), andamento=DEL.filter(c=>c.etapa!=="recebido");
+  $("abaDelivery").innerHTML=`
+    <div class="promo" style="display:flex;align-items:center;gap:12px">
+      <div style="flex:1"><b>Receber pedidos pelo site</b><div class="dica" style="margin:0">${R.aceitando_pedidos!==false?"Ligado: clientes podem pedir agora.":"Desligado: o cardápio online mostra que não estamos recebendo pedidos."}</div></div>
+      <label class="sw"><input type="checkbox" id="dAceitando"${R.aceitando_pedidos!==false?" checked":""}><span></span></label>
+    </div>
+    ${novos.length?`<h3 style="margin:14px 2px 8px">🔔 Aguardando confirmação (${novos.length})</h3>${novos.map(card).join("")}`:""}
+    <h3 style="margin:14px 2px 8px">Em andamento (${andamento.length})</h3>
+    ${andamento.map(card).join("")||`<div class="vazio" style="padding:14px">Nenhum pedido em andamento.</div>`}
+    <details style="margin-top:16px" ${BAIRROS.length&&R.pix_chave?"":"open"}><summary style="font-weight:700;cursor:pointer;padding:6px 2px">⚙️ Configurações do delivery</summary>
+      <div class="promo" style="margin-top:8px">
+        <label class="l" style="display:flex;align-items:center;gap:10px">Fazer entregas <label class="sw"><input type="checkbox" data-df="delivery_ativo"${R.delivery_ativo!==false?" checked":""}><span></span></label></label>
+        <label class="l" style="display:flex;align-items:center;gap:10px">Retirada no balcão <label class="sw"><input type="checkbox" data-df="retirada_ativo"${R.retirada_ativo!==false?" checked":""}><span></span></label></label>
+        <div class="lin"><div><label class="l">Tempo de entrega</label><input class="t" data-df="tempo_entrega" value="${esc(R.tempo_entrega||"")}"></div><div><label class="l">Tempo de retirada</label><input class="t" data-df="tempo_retirada" value="${esc(R.tempo_retirada||"")}"></div></div>
+        <label class="l">Pedido mínimo (R$, 0 = sem mínimo)</label><div class="precos"><div class="pbox"><span>R$</span><input data-df="pedido_minimo" inputmode="decimal" value="${esc(precoEd(R.pedido_minimo||0))}"></div></div>
+        <label class="l">Chave Pix</label><input class="t" data-df="pix_chave" value="${esc(R.pix_chave||"")}" placeholder="CNPJ, telefone, e-mail ou chave aleatória">
+        <div class="lin"><div><label class="l">Nome do recebedor</label><input class="t" data-df="pix_nome" value="${esc(R.pix_nome||"")}"></div><div><label class="l">Banco</label><input class="t" data-df="pix_banco" value="${esc(R.pix_banco||"")}"></div></div>
+        <p class="dica">Salva sozinho enquanto você digita.</p>
+      </div>
+      <div class="promo"><b>Bairros atendidos e taxa de entrega</b>
+        ${BAIRROS.map(b=>`<div data-b="${b.id}" style="display:flex;gap:8px;align-items:center;margin-top:10px">
+          <input class="t" data-bf="nome" value="${esc(b.nome)}" style="flex:2">
+          <div class="pbox" style="flex:1;min-width:100px;display:flex;align-items:center;border:1px solid var(--borda);border-radius:10px;background:#fff"><span style="padding:0 6px;color:var(--sub);font-size:13px">R$</span><input data-bf="taxa" inputmode="decimal" value="${esc(precoEd(b.taxa))}" style="border:0;padding:10px 4px;width:100%;outline:none;font-size:16px"></div>
+          <label class="sw" title="Atende"><input type="checkbox" data-bf="ativo"${b.ativo?" checked":""}><span></span></label>
+          <button class="ico del" data-bc="excluir" title="Excluir">🗑</button></div>`).join("")||`<p class="dica">Nenhum bairro ainda. Sem bairros, só a retirada fica disponível.</p>`}
+        <div class="lin" style="margin-top:12px"><input class="t" id="bNome" placeholder="Nome do bairro" style="flex:2"><input class="t" id="bTaxa" inputmode="decimal" placeholder="Taxa R$" style="flex:1"><button class="btn pri" id="bAdd" style="flex:none">Adicionar</button></div>
+      </div>
+    </details>`;
+}
+$("abaDelivery").addEventListener("click",async e=>{
+  const t=e.target;
+  if(t.id==="bAdd"){
+    const nome=$("bNome").value.trim(), taxa=lerPreco($("bTaxa").value)||0; if(!nome){ status("Digite o nome do bairro.",true); return; }
+    const {error}=await sb.from("bairros").insert({nome,taxa,ordem:BAIRROS.length}); if(error){ status(erroMsg(error),true); return; }
+    status("Bairro adicionado ✓"); await carregarDelivery(); const d=document.querySelector("#abaDelivery details"); if(d) d.open=true; return;
+  }
+  const bc=t.closest("[data-bc]");
+  if(bc){ const id=bc.closest("[data-b]").dataset.b; if(!bc.dataset.ok){ bc.dataset.ok=1; bc.textContent="✓?"; setTimeout(()=>{ delete bc.dataset.ok; bc.textContent="🗑"; },3000); return; }
+    const {error}=await sb.from("bairros").delete().eq("id",id); if(error){ status(erroMsg(error),true); return; } status("Bairro excluído"); await carregarDelivery(); document.querySelector("#abaDelivery details").open=true; return; }
+  const b=t.closest("[data-d]"); if(!b) return;
+  const id=b.closest("[data-c]").dataset.c, ac=b.dataset.d;
+  if(ac==="cancelarAbrir"){ cancelando=id; renderDelivery(); const m=$("motivoCanc"); m&&m.focus(); return; }
+  if(ac==="cancelarFechar"){ cancelando=null; renderDelivery(); return; }
+  b.disabled=true;
+  const {error}=await sb.rpc("acao_delivery",{p_comanda:id,p_acao:ac,p_motivo:ac==="cancelar"?($("motivoCanc").value.trim()||null):null});
+  if(error){ b.disabled=false; status(erroMsg(error),true); return; }
+  cancelando=null;
+  status({aceitar:"Pedido aceito: foi para a cozinha ✓",saiu:"Saiu para entrega ✓",entregue:"Pedido finalizado ✓",pago:"Pix confirmado ✓",cancelar:"Pedido cancelado"}[ac]||"Feito ✓");
+  await carregarDelivery();
+});
+$("abaDelivery").addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset.df&&el.type!=="checkbox"){ const k=el.dataset.df; const v=k==="pedido_minimo"?(lerPreco(el.value)||0):el.value; REST[k]=v; salvarDepois("restaurante",1,{[k]:v}); return; }
+  if(el.dataset.bf&&el.type!=="checkbox"){ const id=el.closest("[data-b]").dataset.b; const k=el.dataset.bf; salvarDepois("bairros",id,{[k]:k==="taxa"?(lerPreco(el.value)||0):el.value}); }
+});
+$("abaDelivery").addEventListener("change",e=>{
+  const el=e.target;
+  if(el.id==="dAceitando"){ REST.aceitando_pedidos=el.checked; salvarDepois("restaurante",1,{aceitando_pedidos:el.checked},0); renderDelivery(); return; }
+  if(el.dataset.df&&el.type==="checkbox"){ REST[el.dataset.df]=el.checked; salvarDepois("restaurante",1,{[el.dataset.df]:el.checked},0); return; }
+  if(el.dataset.bf==="ativo"){ salvarDepois("bairros",el.closest("[data-b]").dataset.b,{ativo:el.checked},0); }
+});
+
 /* ---------- vendas ---------- */
 let diaVendas=null;
 function hojeISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
@@ -599,8 +727,8 @@ async function carregarVendas(){
       ${taxa?`<div class="dica">inclui ${brl(taxa)} de taxa de serviço</div>`:""}
       <div style="margin-top:10px">${Object.entries(porForma).map(([f,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #f0ebe4"><span>${esc(f)}</span><b>${brl(v)}</b></div>`).join("")}</div>
     </div>
-    ${ab.length?`<div class="promo"><b>Mesas abertas agora</b>${ab.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>Mesa ${c.mesa} · desde ${hora(c.aberta_em)}</span><b>${brl(c.parcial)}</b></div>`).join("")}</div>`:""}
-    <div class="promo"><b>Contas fechadas</b>${L.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${hora(c.fechada_em)} · Mesa ${c.mesa} · ${esc(c.forma_pagamento||"")}</span><b>${brl(c.total)}</b></div>`).join("")||`<p class="dica">Nenhuma conta fechada neste dia.</p>`}</div>`;
+    ${ab.length?`<div class="promo"><b>Abertas agora (mesas e delivery)</b>${ab.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${rotuloComanda(c)} · desde ${hora(c.aberta_em)}</span><b>${brl(c.parcial)}</b></div>`).join("")}</div>`:""}
+    <div class="promo"><b>Contas fechadas</b>${L.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${hora(c.fechada_em)} · ${rotuloComanda(c)} · ${esc(c.forma_pagamento||"")}</span><b>${brl(c.total)}</b></div>`).join("")||`<p class="dica">Nenhuma conta fechada neste dia.</p>`}</div>`;
 }
 $("abaVendas").addEventListener("change",e=>{ if(e.target.id==="vDia"){ diaVendas=e.target.value; carregarVendas(); } });
 $("abaVendas").addEventListener("click",e=>{ if(e.target.id==="vAtual") carregarVendas(); });
