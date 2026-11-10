@@ -373,6 +373,7 @@ function abrirSacola(){
   const cli0=ler(K_CLI,{});
   let tipo=cli0.tipo&&((cli0.tipo==="delivery"&&r.delivery_ativo)||(cli0.tipo==="retirada"&&r.retirada_ativo))?cli0.tipo:(r.delivery_ativo?"delivery":"retirada");
   let pag=cli0.pag||"", bairro=bairros.some(b=>b.id===cli0.bairro)?cli0.bairro:"";
+  if(pag==="pix"&&!r.pix_chave) pag="";
   const desenha=()=>{
     const cli=ler(K_CLI,{});
     if(!SACOLA.length){ fechar(); barraSacola(); reRender(); return; }
@@ -395,7 +396,7 @@ function abrirSacola(){
         <label class="l">RUA E NÚMERO</label><input class="t" id="cRua" autocomplete="street-address" value="${esc(cli.rua||"")}" placeholder="Ex: Rua das Flores, 123" maxlength="150">
         <label class="l">COMPLEMENTO / PONTO DE REFERÊNCIA</label><input class="t" id="cComp" value="${esc(cli.comp||"")}" placeholder="Ex: apto 2, perto da praça" maxlength="140">`:""}
       <label class="l">PAGAMENTO</label>
-      <div class="ops" id="sPag"><button data-v="pix" class="${pag==="pix"?"on":""}">Pix</button><button data-v="dinheiro" class="${pag==="dinheiro"?"on":""}">Dinheiro</button><button data-v="cartao" class="${pag==="cartao"?"on":""}">Cartão ${tipo==="delivery"?"na entrega":"no balcão"}</button></div>
+      <div class="ops" id="sPag">${r.pix_chave?`<button data-v="pix" class="${pag==="pix"?"on":""}">Pix</button>`:""}<button data-v="dinheiro" class="${pag==="dinheiro"?"on":""}">Dinheiro</button><button data-v="cartao" class="${pag==="cartao"?"on":""}">Cartão ${tipo==="delivery"?"na entrega":"no balcão"}</button></div>
       ${pag==="dinheiro"?`<label class="l">TROCO PARA QUANTO? (deixe vazio se não precisar)</label><input class="t" id="cTroco" inputmode="decimal" placeholder="Ex: 100">`:""}
       ${pag==="pix"?`<div class="aviso-f">A chave Pix aparece depois que você enviar o pedido.</div>`:""}
       <label class="l">OBSERVAÇÃO DO PEDIDO (opcional)</label><input class="t" id="cObs" maxlength="300" placeholder="Ex: interfone não funciona, ligar ao chegar">
