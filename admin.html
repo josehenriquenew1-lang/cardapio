@@ -484,8 +484,8 @@ function renderRest(){
 $("abaRest").addEventListener("input",e=>{ const k=e.target.dataset.rf; if(!k) return; REST[k]=e.target.value; salvarDepois("restaurante",1,{[k]:e.target.value}); });
 
 /* ---------- usuários e mesas ---------- */
-const PAPEIS={admin:"Administrador",garcom:"Garçom",cozinha:"Cozinha"};
-const ICON_P={admin:"👑",garcom:"🧑‍🍳",cozinha:"🍳"};
+const PAPEIS={admin:"Administrador",garcom:"Garçom",cozinha:"Cozinha",entregador:"Entregador"};
+const ICON_P={admin:"👑",garcom:"🧑‍🍳",cozinha:"🍳",entregador:"🛵"};
 let USUARIOS=[], usuAberto=null;
 async function carregarUsuarios(){ const {data,error}=await sb.rpc("listar_usuarios"); if(error){ status(erroMsg(error),true); return; } USUARIOS=data||[]; renderEquipe(); }
 function renderEquipe(){
@@ -531,6 +531,7 @@ function renderEquipe(){
       <p class="dica">Abra no celular de cada garçom e no tablet da cozinha. Depois use “Adicionar à tela de início” para virar um ícone de aplicativo.</p>
       <p style="margin:8px 0 2px">📱 App do garçom:</p><input class="t" readonly value="${base}garcom.html" onclick="this.select()">
       <p style="margin:12px 0 2px">🍳 Tela da cozinha:</p><input class="t" readonly value="${base}cozinha.html" onclick="this.select()">
+      <p style="margin:12px 0 2px">🛵 App do entregador:</p><input class="t" readonly value="${base}entregador.html" onclick="this.select()">
     </div>`;
 }
 $("abaEquipe").addEventListener("click",async e=>{
@@ -636,6 +637,7 @@ function renderDelivery(){
       <div style="margin-top:8px"><b>${esc(c.cliente_nome)}</b> · <a href="https://wa.me/55${esc(tel)}" target="_blank" rel="noopener">${esc(telF)}</a></div>
       ${ent?`<div class="dica" style="color:var(--txt);font-size:14px">📍 ${esc(c.endereco||"")} · <b>${esc(c.bairro_nome||"")}</b></div>`:""}
       <div style="margin:8px 0;border-top:1px solid #f0ebe4;padding-top:6px">${its.map(i=>`<div style="display:flex;gap:8px;padding:3px 0"><b style="min-width:26px">${i.qtd}×</b><span style="flex:1">${esc(i.nome)}${i.rotulo?" ("+esc(i.rotulo)+")":""}${i.obs?`<br><span style="color:#a35a00;font-size:13px">${esc(i.obs)}</span>`:""}</span><span>${brl(i.preco*i.qtd)}</span></div>`).join("")}</div>
+      ${c.entregador_nome?`<div class="dica" style="color:var(--txt)">🛵 ${c.etapa==="saiu"?"Saiu com":"Entregador"}: <b>${esc(c.entregador_nome)}</b>${c.saiu_em?" às "+hora(c.saiu_em):""}</div>`:""}
       ${c.obs_cliente?`<div class="dica" style="background:#fff4e5;color:#7a4a12;border-radius:8px;padding:6px 8px">💬 ${esc(c.obs_cliente)}</div>`:""}
       <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:14px"><span>Subtotal ${brl(sub)}${ent?` + entrega ${brl(c.taxa_entrega)}`:""}</span><b style="font-size:17px">${brl(tot)}</b></div>
       <div class="dica" style="margin-top:4px;color:var(--txt)">💳 ${PAG[c.forma_pagamento]||esc(c.forma_pagamento||"")}${c.troco_para?` · <b>troco para ${brl(c.troco_para)}</b> (levar ${brl(c.troco_para-tot)})`:""}${c.forma_pagamento==="pix"?(c.pagamento_status==="pago"?' · <b style="color:var(--ok)">Pix confirmado ✓</b>':' · <b style="color:var(--erro)">Pix ainda não confirmado</b>'):""}</div>
