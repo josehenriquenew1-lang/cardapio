@@ -50,6 +50,10 @@ main{padding:12px 12px calc(110px + env(safe-area-inset-bottom));max-width:760px
 .mesa small{font-size:12px;color:var(--sub);margin-top:4px;line-height:1.2}
 .mesa.ocupada{border-color:var(--laranja);background:#fff4ea}
 .mesa.ocupada b{color:var(--laranja-esc)}
+.mesa.cliente{border-color:#e0533f;background:#fdecea;animation:pisca2 1s infinite}
+.mesa.cliente b{color:#b3261e}
+@keyframes pisca2{50%{box-shadow:0 0 0 5px rgba(224,83,63,.3)}}
+.st.aguardando{background:#fde2df;color:#8c1d16}
 .mesa.pronto{border-color:var(--ok);background:#e8f5e9;animation:pisca 1.2s infinite}
 .mesa.pronto b{color:var(--ok)}
 .mesa .minha{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--laranja)}
@@ -150,7 +154,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const semAc=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
 const emailDe=l=>{ l=String(l||"").trim().toLowerCase(); return l.includes("@")?l:l+"@senorx.equipe"; };
 const brl=v=>"R$ "+(+v||0).toFixed(2).replace(".",",");
-const ST={novo:"Aguardando",preparo:"Em preparo",pronto:"Pronto!",entregue:"Entregue",cancelado:"Cancelado"};
+const ST={aguardando:"Pedido do cliente",novo:"Na fila",preparo:"Em preparo",pronto:"Pronto!",entregue:"Entregue",cancelado:"Cancelado"};
 const OBS_RAPIDAS=["Sem cebola","Sem salada","Sem molho","Bem passado","Ao ponto","Mal passado","Para viagem","Sem gelo"];
 const CHAVE_G="senorx_garcom";
 
@@ -210,6 +214,10 @@ async function carregarMesas(){
   ABERTAS.forEach(cm=>cm.pedidos.sort((a,b)=>a.numero-b.numero));
   // avisar pedidos prontos deste garçom
   ABERTAS.forEach(cm=>cm.pedidos.forEach(p=>{
+    if(p.status==="aguardando" && !avisados.has("c"+p.id)){
+      avisados.add("c"+p.id);
+      if(!carregarMesas.primeira){ vibrar([400,150,400,150,400]); bip(); aviso(`🔔 Mesa ${cm.mesa}: pedido do cliente pelo celular. Toque para confirmar`,"erro",10000); $("aviso").onclick=()=>{ $("aviso").className="aviso"; tela={nome:"mesa",mesa:cm.mesa}; render(); }; }
+    }
     if(p.status==="pronto" && !avisados.has(p.id)){
       avisados.add(p.id);
       if(!carregarMesas.primeira && (!EU.id || p.garcom_id===EU.id || cm.garcom_id===EU.id)){ vibrar([300,120,300,120,300]); bip(); aviso(`✅ Mesa ${cm.mesa}: pedido pronto${p.destino==="bar"?" no bar":" na cozinha"}!`,"ok",8000); }
@@ -219,7 +227,8 @@ async function carregarMesas(){
 }
 carregarMesas.primeira=true;
 const comandaDa=n=>ABERTAS.find(c=>c.mesa===n);
-const subtotal=cm=>cm.pedidos.flatMap(p=>p.pedido_itens).filter(i=>!i.cancelado).reduce((s,i)=>s+i.preco*i.qtd,0);
+const subtotal=cm=>cm.pedidos.filter(p=>p.status!=="aguardando").flatMap(p=>p.pedido_itens).filter(i=>!i.cancelado).reduce((s,i)=>s+i.preco*i.qtd,0);
+const temCliente=n=>{ const c=comandaDa(n); return c&&c.pedidos.some(p=>p.status==="aguardando"); };
 
 let tRec=null;
 function recarregarDepois(){ clearTimeout(tRec); tRec=setTimeout(async()=>{ try{ await carregarMesas(); if(tela.nome!=="cardapio") render(); }catch(e){} },400); }
@@ -258,10 +267,10 @@ function telaMesas(){
     });
   $("barra").classList.add("oculto");
   const pronto=n=>{ const c=comandaDa(n); return c&&c.pedidos.some(p=>p.status==="pronto"); };
-  $("corpo").innerHTML=`<div class="legenda"><span><i style="background:#fff;border:1px solid #ccc"></i>Livre</span><span><i style="background:var(--laranja)"></i>Ocupada</span><span><i style="background:var(--ok)"></i>Pedido pronto</span><span><i style="background:var(--laranja);border-radius:50%"></i>Minha mesa</span></div>
+  $("corpo").innerHTML=`<div class="legenda"><span><i style="background:#fff;border:1px solid #ccc"></i>Livre</span><span><i style="background:#e0533f"></i>Pedido do cliente</span><span><i style="background:var(--laranja)"></i>Ocupada</span><span><i style="background:var(--ok)"></i>Pedido pronto</span><span><i style="background:var(--laranja);border-radius:50%"></i>Minha mesa</span></div>
     <div class="grade">${MESAS.map(m=>{ const c=comandaDa(m.numero);
-      return `<div class="mesa${c?" ocupada":""}${pronto(m.numero)?" pronto":""}" data-m="${m.numero}">${c&&EU.id&&c.garcom_id===EU.id?'<span class="minha"></span>':""}<b>${m.numero}</b>
-        <small>${c?(pronto(m.numero)?"PRONTO":brl(subtotal(c))+"<br>"+tempo(c.aberta_em)):(m.nome?esc(m.nome):"livre")}</small></div>`; }).join("")}</div>`;
+      return `<div class="mesa${c?" ocupada":""}${pronto(m.numero)?" pronto":""}${temCliente(m.numero)?" cliente":""}" data-m="${m.numero}">${c&&EU.id&&c.garcom_id===EU.id?'<span class="minha"></span>':""}<b>${m.numero}</b>
+        <small>${c?(temCliente(m.numero)?"PEDIDO DO CLIENTE":pronto(m.numero)?"PRONTO":brl(subtotal(c))+"<br>"+tempo(c.aberta_em)):(m.nome?esc(m.nome):"livre")}</small></div>`; }).join("")}</div>`;
   $("corpo").onclick=e=>{ const m=e.target.closest("[data-m]"); if(!m) return; tela={nome:"mesa",mesa:+m.dataset.m}; carrinho=[]; render(); window.scrollTo(0,0); };
 }
 
@@ -274,8 +283,9 @@ function telaMesa(){
   else {
     h=c.pedidos.map(p=>`<div class="pedido" data-p="${p.id}">
       <div class="ph"><span>${p.destino==="bar"?"🍹 Bar":"🍳 Cozinha"} · ${new Date(p.criado_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · ${esc(p.garcom_nome||"")}</span><span style="flex:1"></span><span class="st ${p.status}">${ST[p.status]}</span></div>
-      ${p.pedido_itens.map(i=>`<div class="li${i.cancelado?" cancel":""}" data-i="${i.id}"><span class="q">${i.qtd}×</span><span class="n">${esc(i.nome)}${i.rotulo?" ("+esc(i.rotulo)+")":""}${i.obs?`<small>${esc(i.obs)}</small>`:""}${!i.cancelado&&p.status==="novo"?`<button class="x" data-c="cancelar">cancelar</button>`:""}</span><span class="v">${brl(i.preco*i.qtd)}</span></div>`).join("")}
+      ${p.pedido_itens.map(i=>`<div class="li${i.cancelado?" cancel":""}" data-i="${i.id}"><span class="q">${i.qtd}×</span><span class="n">${esc(i.nome)}${i.rotulo?" ("+esc(i.rotulo)+")":""}${i.obs?`<small>${esc(i.obs)}</small>`:""}${!i.cancelado&&(p.status==="novo"||p.status==="aguardando")?`<button class="x" data-c="cancelar">cancelar</button>`:""}</span><span class="v">${brl(i.preco*i.qtd)}</span></div>`).join("")}
       ${p.status==="pronto"?`<button class="btn ok bloco" style="margin-top:8px" data-c="entregue">Entreguei na mesa ✓</button>`:""}
+      ${p.status==="aguardando"?`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn pri" style="flex:2" data-c="confirmar">✓ Confirmar e enviar</button><button class="btn perigo" style="flex:1" data-c="recusar">Recusar</button></div>`:""}
     </div>`).join("");
     h+=`<div class="total"><span>Total da mesa</span><b>${brl(subtotal(c))}</b></div>`;
   }
@@ -286,6 +296,13 @@ function telaMesa(){
   if(c) $("bFechar").onclick=()=>fecharConta(c);
   $("corpo").onclick=async e=>{
     const b=e.target.closest("[data-c]"); if(!b) return;
+    if(b.dataset.c==="confirmar"||b.dataset.c==="recusar"){
+      if(b.dataset.c==="recusar"&&!b.dataset.ok){ b.dataset.ok=1; b.textContent="Confirmar recusa"; setTimeout(()=>{ delete b.dataset.ok; b.textContent="Recusar"; },4000); return; }
+      b.disabled=true;
+      const {error}=await sb.rpc("confirmar_pedido_mesa",{p_pedido:b.closest("[data-p]").dataset.p,p_ok:b.dataset.c==="confirmar",p_garcom:EU.id||null});
+      if(error) aviso(erroMsg(error),"erro"); else { aviso(b.dataset.c==="confirmar"?"Enviado para a cozinha ✓":"Pedido recusado","neutro"); await carregarMesas(); render(); }
+      return;
+    }
     if(b.dataset.c==="entregue"){ b.disabled=true; const {error}=await sb.from("pedidos").update({status:"entregue"}).eq("id",b.closest("[data-p]").dataset.p); if(error) aviso(erroMsg(error),"erro"); else { await carregarMesas(); render(); } }
     if(b.dataset.c==="cancelar"){
       if(!b.dataset.ok){ b.dataset.ok=1; b.textContent="toque de novo para cancelar"; setTimeout(()=>{ delete b.dataset.ok; b.textContent="cancelar"; },4000); return; }

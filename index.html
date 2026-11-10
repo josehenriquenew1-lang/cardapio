@@ -153,6 +153,8 @@ body.com-sacola footer{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 const SUPABASE_URL = "https://xcgwgqkvpquyrwxbpqqm.supabase.co";
 const SUPABASE_KEY = "sb_publishable_7cKmXXVOibhK1n49Y5l6vA_KpZlmM4i";
 const CACHE = "senorx_cardapio_online";
+const MESA=(()=>{ const m=new URLSearchParams(location.search).get("mesa"); return m&&/^\d{1,3}$/.test(m)?+m:null; })();
+
 
 const ICONES = {
   hamburguer:'<path d="M8 21.5C8 14 15 9.5 24 9.5S40 14 40 21.5z"/><path d="M7 26h21l3-3 3 3h7"/><path d="M10 30.5h28a4.2 4.2 0 0 1 0 8.4H10a4.2 4.2 0 0 1 0-8.4z"/><path d="M14 32.5l6 4 15-2.5"/>',
@@ -273,13 +275,12 @@ async function iniciar(){
 /* =========================================================
    PEDIDO ONLINE (delivery e retirada)
    ========================================================= */
-const K_SAC="senorx_sacola", K_CLI="senorx_cliente", K_ULT="senorx_ultimo_pedido";
+const K_SAC=MESA?"senorx_sacola_mesa":"senorx_sacola", K_CLI="senorx_cliente", K_ULT="senorx_ultimo_pedido";
 const ler=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } };
 const gravar=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
 let SACOLA=ler(K_SAC,[]);
 const OBS_RAP=["Sem cebola","Sem salada","Sem molho","Bem passado","Ao ponto"];
-const MESA=(()=>{ const m=new URLSearchParams(location.search).get("mesa"); return m&&/^\d{1,3}$/.test(m)?+m:null; })();
-const pedidosAbertos=r=>!MESA&&r&&r.aceitando_pedidos!==false&&(r.delivery_ativo!==false||r.retirada_ativo!==false)&&(r.delivery_ativo!==undefined);
+const pedidosAbertos=r=>MESA?(!!r&&r.pedido_mesa_ativo!==false&&r.pedido_mesa_ativo!==undefined):r&&r.aceitando_pedidos!==false&&(r.delivery_ativo!==false||r.retirada_ativo!==false)&&(r.delivery_ativo!==undefined);
 const temPreco=i=>(i.precos||[]).some(p=>p.valor!=null&&p.valor!=="");
 const qtdItem=id=>SACOLA.filter(x=>x.item_id===id).reduce((s,x)=>s+x.qtd,0);
 const subSacola=()=>SACOLA.reduce((s,x)=>s+x.preco*x.qtd,0);
@@ -297,7 +298,7 @@ function barraSacola(){
   const b=document.getElementById("sacola"), n=SACOLA.reduce((s,x)=>s+x.qtd,0);
   const ok=n&&pedidosAbertos(DADOS&&DADOS.restaurante);
   b.style.display=ok?"flex":"none"; document.body.classList.toggle("com-sacola",!!ok);
-  if(ok) b.innerHTML=`<span><span class="ct">${n}</span>Ver sacola</span><span>${brl(subSacola())}</span>`;
+  if(ok) b.innerHTML=`<span><span class="ct">${n}</span>${MESA?"Ver pedido da mesa":"Ver sacola"}</span><span>${brl(subSacola())}</span>`;
 }
 function abrir(html,depois){
   const c=document.getElementById("camada");
@@ -369,7 +370,60 @@ function abrirLista(s){
 function alertaFolha(f,msg){ let el=f.querySelector(".erro-f"); if(!el){ el=document.createElement("div"); el.className="erro-f"; f.appendChild(el); } el.textContent=msg; el.scrollIntoView({block:"nearest",behavior:"smooth"}); }
 
 function fmtTel(v){ const d=v.replace(/\D/g,"").slice(0,11); if(d.length<=2) return d; if(d.length<=6) return `(${d.slice(0,2)}) ${d.slice(2)}`; if(d.length<=10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`; return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`; }
+const K_MESA="senorx_mesa_pedidos_"+MESA;
+function lerMesa(){ const v=ler(K_MESA,[]); return v.filter(x=>Date.now()-x.em<6*3600e3); }
+function abrirSacolaMesa(){
+  const cli=ler(K_CLI,{});
+  const desenha=()=>{
+    if(!SACOLA.length){ fechar(); barraSacola(); reRender(); return; }
+    abrir(`<button class="fx" aria-label="Fechar">×</button><h2>Pedido da mesa ${MESA}</h2><div class="sub">Confira e envie. O garçom confirma e manda para a cozinha.</div>
+      ${SACOLA.map((x,k)=>`<div class="lsac"><div class="n"><b>${esc(x.nome)}</b>${x.rotulo?` <small style="display:inline">(${esc(x.rotulo)})</small>`:""}${x.obs?`<small>${esc(x.obs)}</small>`:""}<small>${brl(x.preco*x.qtd)}</small></div>
+        <div class="m"><button data-k="${k}" data-d="-1">−</button><b>${x.qtd}</b><button data-k="${k}" data-d="1">+</button></div></div>`).join("")}
+      <button class="sec" id="sMais" style="margin-top:12px">+ Adicionar mais itens</button>
+      <label class="l">SEU NOME (opcional, para o garçom saber de quem é)</label><input class="t" id="cNome" maxlength="40" value="${esc(cli.nome||"")}">
+      <div class="tot g" style="margin-top:16px"><span>Total deste pedido</span><span>${brl(subSacola())}</span></div>
+      <button class="pri" id="sEnviar">Enviar pedido para o garçom</button>
+      <p style="font-size:12px;color:var(--suave);text-align:center;margin:10px 0 0">O pagamento é feito no final, com o garçom.</p>`,f=>{
+        f.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{ const x=SACOLA[+b.dataset.k]; x.qtd+=+b.dataset.d; if(x.qtd<=0) SACOLA.splice(+b.dataset.k,1); else x.qtd=Math.min(20,x.qtd); gravar(K_SAC,SACOLA); barraSacola(); desenha(); });
+        f.querySelector("#sMais").onclick=()=>{ fechar(); reRender(); };
+        f.querySelector("#sEnviar").onclick=async()=>{
+          const nome=f.querySelector("#cNome").value.trim(); if(nome) gravar(K_CLI,{...ler(K_CLI,{}),nome});
+          const btn=f.querySelector("#sEnviar"); btn.disabled=true; btn.textContent="Enviando…";
+          try{
+            const resp=await fetch(`${SUPABASE_URL}/rest/v1/rpc/criar_pedido_mesa`,{method:"POST",headers:{apikey:SUPABASE_KEY,"Content-Type":"application/json",Accept:"application/json"},
+              body:JSON.stringify({p_mesa:MESA,p_nome:nome,p_itens:SACOLA.map(x=>x.item_id?{item_id:x.item_id,preco_idx:x.preco_idx,qtd:x.qtd,obs:x.obs}:{secao_id:x.secao_id,nome:x.nome,qtd:x.qtd,obs:x.obs})})});
+            const j=await resp.json().catch(()=>({}));
+            if(!resp.ok){ btn.disabled=false; btn.textContent="Tentar de novo"; return alertaFolha(f,j.message||"Não foi possível enviar. Chame o garçom."); }
+            const lista=lerMesa(); lista.push({em:Date.now(),ids:j.ids||[],itens:SACOLA.map(x=>`${x.qtd}× ${x.nome}${x.rotulo?" ("+x.rotulo+")":""}`),total:subSacola()}); gravar(K_MESA,lista);
+            SACOLA=[]; gravar(K_SAC,SACOLA); barraSacola(); reRender(); mostrarPedidosMesa(true);
+          }catch(e){ btn.disabled=false; btn.textContent="Tentar de novo"; alertaFolha(f,"Sem conexão. Tente de novo ou chame o garçom."); }
+        };
+      });
+  };
+  desenha();
+}
+const ST_MESA={aguardando:["⏳","Aguardando o garçom confirmar"],novo:["👍","Confirmado, na fila da cozinha"],preparo:["🔥","Em preparo"],pronto:["✅","Pronto, já vai para a mesa"],entregue:["🍽️","Entregue"],cancelado:["✖️","Não confirmado: fale com o garçom"]};
+let tMesa=null;
+async function mostrarPedidosMesa(novo){
+  const lista=lerMesa();
+  abrir(`<button class="fx" aria-label="Fechar">×</button><h2>${novo===true?"Pedido enviado! 🎉":"Meus pedidos · Mesa "+MESA}</h2>
+    <div class="sub">${novo===true?"O garçom vai confirmar em instantes.":"Acompanhe o andamento."}</div><div id="mLista">${lista.slice().reverse().map((p,k)=>`<div style="border-top:1px solid var(--linha);padding:10px 0"><div style="font-size:13px;color:var(--suave)">${new Date(p.em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})} · ${brl(p.total)}</div><div style="margin:3px 0 6px">${p.itens.map(esc).join("<br>")}</div><div class="mst" data-ids="${p.ids.join(",")}" style="font-weight:700">…</div></div>`).join("")}</div>
+    <button class="sec" id="mFechar">Voltar ao cardápio</button>`,f=>{ f.querySelector("#mFechar").onclick=fechar; });
+  const atual=async()=>{
+    const ids=lista.flatMap(p=>p.ids); if(!ids.length||!document.getElementById("mLista")){ clearInterval(tMesa); return; }
+    try{
+      const r=await fetch(`${SUPABASE_URL}/rest/v1/rpc/status_pedidos_mesa`,{method:"POST",headers:{apikey:SUPABASE_KEY,"Content-Type":"application/json"},body:JSON.stringify({p_ids:ids})});
+      const st=await r.json(); const por=Object.fromEntries(st.map(s=>[s.id,s.status]));
+      const ordem=["cancelado","aguardando","novo","preparo","pronto","entregue"];
+      document.querySelectorAll(".mst").forEach(el=>{ const ss=el.dataset.ids.split(",").map(i=>por[i]).filter(Boolean); if(!ss.length){ el.textContent=""; return; }
+        const s=ss.includes("aguardando")?"aguardando":ss.every(x=>x==="cancelado")?"cancelado":ss.filter(x=>x!=="cancelado").sort((a,b)=>ordem.indexOf(a)-ordem.indexOf(b))[0];
+        el.textContent=ST_MESA[s][0]+" "+ST_MESA[s][1]; el.style.color=s==="cancelado"?"#ff9a8f":s==="pronto"||s==="entregue"?"#7fd18a":"var(--laranja2)"; });
+    }catch(e){}
+  };
+  atual(); clearInterval(tMesa); tMesa=setInterval(atual,15000);
+}
 function abrirSacola(){
+  if(MESA) return abrirSacolaMesa();
   const r=DADOS.restaurante, bairros=DADOS.bairros||[];
   const cli0=ler(K_CLI,{});
   let tipo=cli0.tipo&&((cli0.tipo==="delivery"&&r.delivery_ativo)||(cli0.tipo==="retirada"&&r.retirada_ativo))?cli0.tipo:(r.delivery_ativo?"delivery":"retirada");
@@ -480,7 +534,10 @@ async function atualizarAcomp(u){
 }
 function mostrarAcompanhar(){
   const u=ler(K_ULT,null), box=document.getElementById("acomp");
-  if(MESA){ box.innerHTML=`<div class="acomp"><div style="background:#2a201b;border:1px solid var(--laranja);border-radius:12px;padding:12px;text-align:center"><div style="font:800 22px 'Playfair Display',serif;color:var(--creme)">Mesa ${MESA}</div><div style="color:var(--suave);font-size:14px;margin-top:2px">Escolha à vontade e faça seu pedido com o garçom 🍔</div></div></div>`; document.getElementById("fechado").innerHTML=""; return; }
+  if(MESA){ const pode=pedidosAbertos(DADOS&&DADOS.restaurante), env=lerMesa();
+    box.innerHTML=`<div class="acomp"><div style="background:#2a201b;border:1px solid var(--laranja);border-radius:12px;padding:12px;text-align:center"><div style="font:800 22px 'Playfair Display',serif;color:var(--creme)">Mesa ${MESA}</div><div style="color:var(--suave);font-size:14px;margin-top:2px">${pode?"Toque no <b style=\"color:var(--laranja)\">+</b> para escolher e envie seu pedido. O garçom confirma em seguida 🍔":"Faça seu pedido com o garçom 🍔"}</div></div>${env.length?`<button id="bAcompMesa" style="margin-top:8px">📋 Ver meus pedidos desta mesa (${env.length})</button>`:""}</div>`;
+    const bm=document.getElementById("bAcompMesa"); if(bm) bm.onclick=mostrarPedidosMesa;
+    document.getElementById("fechado").innerHTML=""; return; }
   if(!u||Date.now()-u.em>12*3600e3){ box.innerHTML=""; return; }
   box.innerHTML=`<div class="acomp"><button id="bAcomp">📦 Acompanhar meu pedido ${esc(u.codigo)}</button></div>`;
   document.getElementById("bAcomp").onclick=()=>mostrarConfirmacao(u,false);

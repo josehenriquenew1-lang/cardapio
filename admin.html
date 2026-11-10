@@ -525,6 +525,7 @@ function renderEquipe(){
     </div>
     <div class="promo"><b>Mesas</b>
       <p class="dica">Hoje estão ativas <b>${ativas}</b> mesas (números 1 a ${ativas}).</p>
+      <label class="l" style="display:flex;align-items:center;gap:10px">Cliente pode pedir pelo QR Code da mesa (o garçom confirma) <label class="sw"><input type="checkbox" id="mQrPedido"${REST.pedido_mesa_ativo!==false?" checked":""}><span></span></label></label>
       <div class="lin" style="margin-top:8px;align-items:center"><label class="l" style="margin:0;flex:none">Quantidade de mesas</label><input class="t" id="mQtd" type="number" min="1" max="200" value="${ativas}" style="max-width:110px"><button class="btn pri" id="mAplicar" style="flex:none">Aplicar</button></div>
     </div>
     <div class="promo"><b>Links da equipe</b>
@@ -580,6 +581,7 @@ $("abaEquipe").addEventListener("click",async e=>{
   }
 });
 
+$("abaEquipe").addEventListener("change",e=>{ if(e.target.id==="mQrPedido"){ REST.pedido_mesa_ativo=e.target.checked; salvarDepois("restaurante",1,{pedido_mesa_ativo:e.target.checked},0); } });
 /* ---------- delivery ---------- */
 const rotuloComanda=c=>c.tipo==="delivery"?"🛵 "+esc(c.cliente_nome||"Delivery"):c.tipo==="retirada"?"🏃 "+esc(c.cliente_nome||"Retirada"):"Mesa "+c.mesa;
 let DEL=[], BAIRROS=[], delVistos=null, audioDel=null, cancelando=null;
