@@ -165,6 +165,7 @@ textarea.t{resize:vertical;min-height:44px}
       <button data-a="promos">Promoções</button>
       <button data-a="vendas">Vendas</button>
       <button data-a="ind">Indicadores</button>
+      <button data-a="impressos">Impressos</button>
       <button data-a="equipe">Equipe e mesas</button>
       <button data-a="rest">Restaurante</button>
     </nav>
@@ -178,6 +179,7 @@ textarea.t{resize:vertical;min-height:44px}
     <div id="abaPromos" class="oculto"></div>
     <div id="abaVendas" class="oculto"></div>
     <div id="abaInd" class="oculto"></div>
+    <div id="abaImpressos" class="oculto"></div>
     <div id="abaEquipe" class="oculto"></div>
     <div id="abaRest" class="oculto"></div>
   </main>
@@ -185,6 +187,7 @@ textarea.t{resize:vertical;min-height:44px}
 <div class="status" id="status"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 const SUPABASE_URL="https://xcgwgqkvpquyrwxbpqqm.supabase.co", SUPABASE_KEY="sb_publishable_7cKmXXVOibhK1n49Y5l6vA_KpZlmM4i";
 const sb = window.__FAKE_SB__ || supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -292,10 +295,11 @@ window.addEventListener("beforeunload",e=>{ if(pend.size){ e.preventDefault(); e
 $("abas").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return;
   document.querySelectorAll("#abas button").forEach(x=>x.classList.toggle("on",x===b));
-  const mapa={cardapio:"abaCardapio",delivery:"abaDelivery",promos:"abaPromos",vendas:"abaVendas",ind:"abaInd",equipe:"abaEquipe",rest:"abaRest"};
+  const mapa={cardapio:"abaCardapio",delivery:"abaDelivery",promos:"abaPromos",vendas:"abaVendas",ind:"abaInd",equipe:"abaEquipe",impressos:"abaImpressos",rest:"abaRest"};
   Object.entries(mapa).forEach(([k,id])=>$(id).classList.toggle("oculto",b.dataset.a!==k));
   if(b.dataset.a==="vendas") carregarVendas();
   if(b.dataset.a==="ind") carregarInd();
+  if(b.dataset.a==="impressos") renderImpressos();
   if(b.dataset.a==="delivery") carregarDelivery();
   window.scrollTo(0,0);
 });
@@ -791,6 +795,73 @@ async function carregarInd(){
 }
 $("abaInd").addEventListener("click",e=>{ const b=e.target.closest("[data-p]"); if(!b) return; perInd=b.dataset.p; carregarInd(); });
 $("abaInd").addEventListener("input",e=>{ const k=e.target.dataset.mf; if(!k) return; const v=parseInt(e.target.value)||1; salvarDepois("restaurante",1,{[k]:v}); });
+
+/* ---------- impressos ---------- */
+function renderImpressos(){
+  const base=location.href.replace(/admin\.html.*$/,"").replace(/[?#].*$/,"");
+  const ativas=MESAS.filter(m=>m.ativo).length||30;
+  $("abaImpressos").innerHTML=`
+    <div class="promo"><b>📄 Cardápio para a gráfica (PDF)</b>
+      <p class="dica">Abre o cardápio impresso no estilo Gentleman, já com os itens e preços atuais do painel. Lá você escolhe <b>A3 ou A4</b>, 2 colunas ou folder, o tamanho do texto e o modo <b>PDF para gráfica</b> (com sangria e marcas de corte). Depois toque em <b>Imprimir / PDF</b> e escolha <b>Salvar como PDF</b>.</p>
+      <p class="dica">Itens marcados como esgotados não aparecem. Para mudar a ordem ou a página de uma seção, use a aba Cardápio.</p>
+      <a class="btn pri" style="width:100%;margin-top:8px;text-decoration:none" href="${base}impresso.html" target="_blank" rel="noopener">Abrir gerador do cardápio impresso ↗</a>
+      <p class="dica" style="margin-top:8px">Funciona melhor no computador (Chrome).</p>
+    </div>
+    <div class="promo"><b>🔳 QR Codes das mesas (PDF)</b>
+      <p class="dica">Um display por mesa, 4 por folha A4 (10,5 × 14,8 cm). O cliente escaneia e vê o cardápio da mesa${REST.pedido_mesa_ativo!==false?" e pode pedir pelo celular":""}.</p>
+      <div class="lin"><div><label class="l">Da mesa</label><input class="t" type="number" min="1" id="qDe" value="1"></div><div><label class="l">Até a mesa</label><input class="t" type="number" min="1" id="qAte" value="${ativas}"></div></div>
+      <label class="l" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="qGeral" style="width:20px;height:20px"> Incluir também 1 display geral (cardápio com delivery, sem número de mesa)</label>
+      <button class="btn pri" id="qGerar" style="width:100%;margin-top:10px">Gerar e imprimir / salvar PDF</button>
+    </div>
+    <div class="promo"><b>🔗 QR Code do cardápio online</b>
+      <p class="dica">Para Instagram, WhatsApp, panfleto ou balcão (abre o cardápio com delivery).</p>
+      <div style="display:flex;gap:14px;align-items:center;margin-top:8px"><div id="qrGeralPrev" style="width:110px;height:110px;background:#F1E4D3;padding:6px;border-radius:8px"></div>
+      <div style="flex:1"><input class="t" readonly value="${base}" onclick="this.select()"><button class="btn" id="qBaixar" style="margin-top:8px">⬇️ Baixar imagem do QR</button></div></div>
+    </div>`;
+  $("qrGeralPrev").innerHTML=qrSvgAdmin(base);
+}
+function qrSvgAdmin(texto){
+  const q=qrcode(0,"M"); q.addData(unescape(encodeURIComponent(texto))); q.make(); const n=q.getModuleCount(); let d="";
+  for(let y=0;y<n;y++) for(let x=0;x<n;x++) if(q.isDark(y,x)) d+=`M${x} ${y}h1v1h-1z`;
+  return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" style="width:100%;height:100%;display:block"><path fill="#1B1512" d="${d}"/></svg>`;
+}
+function gerarDisplays(lista){
+  const base=location.href.replace(/admin\.html.*$/,"").replace(/[?#].*$/,"");
+  const logo=document.querySelector(".topo svg path").getAttribute("d");
+  const card=m=>`<div class="c"><div class="m"><svg class="lg" viewBox="200 150 1560 1830"><path fill="currentColor" fill-rule="evenodd" d="${logo}"/></svg>
+    <div class="t">Nosso cardápio</div><div class="o"><i></i>✕<i></i></div><div class="qr">${qrSvgAdmin(m?base+"?mesa="+m:base)}</div>
+    <div class="a">Aponte a câmera do celular</div><div class="mesa">${m?"Mesa "+m:"Peça pelo celular"}</div></div></div>`;
+  const pags=[]; for(let i=0;i<lista.length;i+=4) pags.push(`<div class="pg">${lista.slice(i,i+4).map(card).join("")}</div>`);
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>QR Codes das mesas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500&family=Playfair+Display:wght@800&display=block" rel="stylesheet">
+  <style>@page{size:A4;margin:0} body{margin:0}
+  .pg{width:210mm;height:297mm;display:grid;grid-template-columns:105mm 105mm;grid-template-rows:148.5mm 148.5mm;break-after:page;page-break-after:always;background:#fff}
+  .pg:last-child{break-after:auto;page-break-after:auto}
+  .c{background:#1B1512;padding:5mm;box-sizing:border-box;border:.2mm dashed #bbb;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .m{height:100%;border:.55mm solid #CF7132;outline:.25mm solid rgba(207,113,50,.45);outline-offset:1.3mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#F1E4D3}
+  .lg{width:28mm;color:#CF7132}.t{font:800 16pt "Playfair Display",Georgia,serif;margin-top:3mm}
+  .o{display:flex;align-items:center;gap:2mm;color:#CF7132;font-size:7pt;margin:1.5mm 0 4mm}.o i{width:14mm;height:.25mm;background:#CF7132}
+  .qr{width:50mm;height:50mm;background:#F1E4D3;padding:3mm;border-radius:2mm}
+  .a{font:500 9pt Oswald,Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-top:4mm}
+  .mesa{font:800 20pt "Playfair Display",Georgia,serif;color:#CF7132;margin-top:2mm}</style></head>
+  <body>${pags.join("")}<script>(document.fonts?document.fonts.ready:Promise.resolve()).then(()=>setTimeout(()=>window.print(),300));<\/script></body></html>`;
+  const w=window.open("","_blank");
+  if(w){ w.document.open(); w.document.write(html); w.document.close(); }
+  else { let fr=document.getElementById("frImpressao"); if(fr) fr.remove(); fr=document.createElement("iframe"); fr.id="frImpressao"; fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0"; document.body.appendChild(fr); fr.srcdoc=html; }
+}
+$("abaImpressos").addEventListener("click",e=>{
+  if(e.target.id==="qGerar"){
+    const de=Math.max(1,parseInt($("qDe").value)||1), ate=Math.min(200,Math.max(de,parseInt($("qAte").value)||de));
+    const lista=[]; if($("qGeral").checked) lista.push(0); for(let i=de;i<=ate;i++) lista.push(i);
+    gerarDisplays(lista); status(`${lista.length} displays gerados`);
+  }
+  if(e.target.id==="qBaixar"){
+    const svg=$("qrGeralPrev").querySelector("svg"), n=+svg.getAttribute("viewBox").split(" ")[2], esc=24, borda=4, tam=(n+borda*2)*esc;
+    const cv=document.createElement("canvas"); cv.width=cv.height=tam; const cx=cv.getContext("2d"); cx.fillStyle="#F1E4D3"; cx.fillRect(0,0,tam,tam);
+    const img=new Image(); img.onload=()=>{ cx.drawImage(img,borda*esc,borda*esc,n*esc,n*esc); const a=document.createElement("a"); a.href=cv.toDataURL("image/png"); a.download="qrcode-cardapio-senorx.png"; a.click(); };
+    img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+  }
+});
 
 /* ---------- vendas ---------- */
 let diaVendas=null, ABERTAS_V=[];
