@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#1B1512">
+<link rel="manifest" href="app-admin.webmanifest">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Painel SX">
 <title>Painel · Señor X</title>
 <style>
 :root{--laranja:#CF7132;--laranja-esc:#b45f27;--fundo:#1B1512;--creme:#F1E4D3;--bg:#f4f0ea;--card:#fff;--borda:#e4ddd3;--txt:#2a2420;--sub:#7a6f66;--ok:#2e7d32;--erro:#b3261e}
@@ -163,7 +170,7 @@ textarea.t{resize:vertical;min-height:44px}
       <button data-a="cardapio" class="on">Cardápio</button>
       <button data-a="delivery">Delivery <span id="badgeDel" class="pill" style="display:none;background:#e0533f;color:#fff;margin-left:4px"></span></button>
       <button data-a="promos">Promoções</button>
-      <button data-a="vendas">Vendas</button>
+      <button data-a="vendas">Vendas e caixa</button>
       <button data-a="ind">Indicadores</button>
       <button data-a="impressos">Impressos e WhatsApp</button>
       <button data-a="equipe">Equipe e mesas</button>
@@ -558,15 +565,22 @@ function renderEquipe(){
       <label class="l" style="display:flex;align-items:center;gap:10px">Cliente pode pedir pelo QR Code da mesa (o garçom confirma) <label class="sw"><input type="checkbox" id="mQrPedido"${REST.pedido_mesa_ativo!==false?" checked":""}><span></span></label></label>
       <div class="lin" style="margin-top:8px;align-items:center"><label class="l" style="margin:0;flex:none">Quantidade de mesas</label><input class="t" id="mQtd" type="number" min="1" max="200" value="${ativas}" style="max-width:110px"><button class="btn pri" id="mAplicar" style="flex:none">Aplicar</button></div>
     </div>
-    <div class="promo"><b>Links da equipe</b>
-      <p class="dica">Abra no celular de cada garçom e no tablet da cozinha. Depois use “Adicionar à tela de início” para virar um ícone de aplicativo.</p>
-      <p style="margin:8px 0 2px">📱 App do garçom:</p><input class="t" readonly value="${base}garcom.html" onclick="this.select()">
-      <p style="margin:12px 0 2px">🍳 Tela da cozinha:</p><input class="t" readonly value="${base}cozinha.html" onclick="this.select()">
-      <p style="margin:12px 0 2px">🛵 App do entregador:</p><input class="t" readonly value="${base}entregador.html" onclick="this.select()">
+    <div class="promo"><b>📲 Apps da equipe</b>
+      <p class="dica">Peça para a pessoa <b>apontar a câmera do celular</b> para o QR code do app dela. Abre direto no app certo.</p>
+      ${[["garcom.html","📱 App do garçom"],["cozinha.html","🍳 Tela da cozinha"],["entregador.html","🛵 App do entregador"],["admin.html","⚙️ Este painel"]].map(([arq,n])=>`
+        <div style="display:flex;gap:12px;align-items:center;border-top:1px solid #f0ebe4;padding:10px 0">
+          <div style="width:84px;height:84px;flex:none;background:#fff">${qrSvgAdmin(base+arq)}</div>
+          <div style="flex:1;min-width:0"><b>${n}</b><input class="t" readonly value="${base}${arq}" onclick="this.select()" style="margin-top:4px;font-size:13px"></div></div>`).join("")}
+      <p style="margin:12px 0 4px"><b>Para virar um ícone na tela do celular (como um app):</b></p>
+      <p class="dica" style="margin:2px 0"><b>Android (Chrome):</b> abra o link, toque em <b>📲 Instalar app</b> no canto da tela, ou no menu <b>⋮ → Instalar app</b> (ou "Adicionar à tela inicial").</p>
+      <p class="dica" style="margin:2px 0"><b>iPhone (Safari):</b> abra o link no <b>Safari</b>, toque em <b>Compartilhar</b> (quadrado com seta para cima) → <b>Adicionar à Tela de Início</b> → Adicionar.</p>
+      <p class="dica" style="margin:2px 0">Depois de instalado, o app abre em tela cheia, sem a barra do navegador, e continua entrando sozinho com o usuário salvo.</p>
+      <button class="btn pri" id="instPainel" style="width:100%;margin-top:10px;${window.appInstalado&&appInstalado()?"display:none":""}">📲 Instalar este painel neste aparelho</button>
     </div>`;
 }
 $("abaEquipe").addEventListener("click",async e=>{
   const t=e.target;
+  if(t.id==="instPainel"){ if(!(window.instalarApp&&instalarApp())) status(/iPhone|iPad/.test(navigator.userAgent)?"No iPhone: Safari → Compartilhar → Adicionar à Tela de Início":"Use o menu do navegador: ⋮ → Instalar app (ou Adicionar à tela inicial)",false,6000); return; }
   if(t.id==="nuCriar"){
     const nome=$("nuNome").value.trim(), login=$("nuLogin").value.trim().toLowerCase(), senha=$("nuSenha").value, papel=(document.querySelector('#nuPapel input:checked')||{}).value;
     if(!nome||!login||!senha){ status("Preencha nome, usuário e senha.",true); return; }
@@ -694,7 +708,10 @@ function renderDelivery(){
         <div class="lin"><div><label class="l">Tempo de entrega</label><input class="t" data-df="tempo_entrega" value="${esc(R.tempo_entrega||"")}"></div><div><label class="l">Tempo de retirada</label><input class="t" data-df="tempo_retirada" value="${esc(R.tempo_retirada||"")}"></div></div>
         <label class="l">Pedido mínimo (R$, 0 = sem mínimo)</label><div class="precos"><div class="pbox"><span>R$</span><input data-df="pedido_minimo" inputmode="decimal" value="${esc(precoEd(R.pedido_minimo||0))}"></div></div>
         <label class="l">Chave Pix</label><input class="t" data-df="pix_chave" value="${esc(R.pix_chave||"")}" placeholder="CNPJ, telefone, e-mail ou chave aleatória">
+        <label class="l">Tipo da chave Pix</label><select class="t" data-df="pix_tipo">${[["","— escolha —"],["cnpj","CNPJ"],["cpf","CPF"],["telefone","Celular"],["email","E-mail"],["aleatoria","Chave aleatória"]].map(([v,n])=>`<option value="${v}"${(R.pix_tipo||pixTipoAdivinha(R.pix_chave))===v?" selected":""}>${n}</option>`).join("")}</select>
         <div class="lin"><div><label class="l">Nome do recebedor</label><input class="t" data-df="pix_nome" value="${esc(R.pix_nome||"")}"></div><div><label class="l">Banco</label><input class="t" data-df="pix_banco" value="${esc(R.pix_banco||"")}"></div></div>
+        <label class="l">Cidade do recebedor (para o QR do Pix)</label><input class="t" data-df="pix_cidade" value="${esc(R.pix_cidade||"")}" placeholder="Ex: Criciúma">
+        <div id="pixTeste" style="margin-top:12px">${pixTesteHtml()}</div>
         <p class="dica">Salva sozinho enquanto você digita.</p>
       </div>
       <div class="promo"><b>Bairros atendidos e taxa de entrega</b>
@@ -731,7 +748,7 @@ $("abaDelivery").addEventListener("click",async e=>{
 });
 $("abaDelivery").addEventListener("input",e=>{
   const el=e.target;
-  if(el.dataset.df&&el.type!=="checkbox"){ const k=el.dataset.df; const v=k==="pedido_minimo"?(lerPreco(el.value)||0):el.value; REST[k]=v; salvarDepois("restaurante",1,{[k]:v}); return; }
+  if(el.dataset.df&&el.type!=="checkbox"){ const k=el.dataset.df; const v=k==="pedido_minimo"?(lerPreco(el.value)||0):el.value; REST[k]=v; salvarDepois("restaurante",1,{[k]:v}); if(k.startsWith("pix_")&&$("pixTeste")) $("pixTeste").innerHTML=pixTesteHtml(); return; }
   if(el.dataset.bf&&el.type!=="checkbox"){ const id=el.closest("[data-b]").dataset.b; const k=el.dataset.bf; salvarDepois("bairros",id,{[k]:k==="taxa"?(lerPreco(el.value)||0):el.value}); }
 });
 $("abaDelivery").addEventListener("change",e=>{
@@ -918,6 +935,58 @@ $("abaImpressos").addEventListener("click",e=>{
   if(e.target.id==="zPadrao"){ try{ localStorage.removeItem(K_ZAP); }catch(_){} renderImpressos(); status("Textos voltaram ao padrão"); }
 });
 
+/* ---------- Pix com valor (BR Code / "copia e cola", padrão do Banco Central) ---------- */
+function pixSemAcento(s){ return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 .\-]/g,"").replace(/\s+/g," ").trim(); }
+function pixTipoAdivinha(c){
+  c=String(c||"").trim(); const d=c.replace(/\D/g,"");
+  if(!c) return "";
+  if(c.includes("@")) return "email";
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(c)) return "aleatoria";
+  if(c.startsWith("+")||/[()]/.test(c)) return "telefone";
+  if(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/.test(c)) return "cnpj";
+  if(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(c)) return "cpf";
+  if(d.length===10&&d===c.replace(/[\s-]/g,"")) return "telefone";
+  return "";
+}
+function pixChaveNorm(chave,tipo){
+  const c=String(chave||"").trim(), d=c.replace(/\D/g,"");
+  tipo=tipo||pixTipoAdivinha(c);
+  if(tipo==="cpf") return d.length===11?d:"";
+  if(tipo==="cnpj") return d.length===14?d:"";
+  if(tipo==="telefone"){ const n=(d.startsWith("55")&&d.length>=12)?d:"55"+d; return n.length>=12&&n.length<=13?"+"+n:""; }
+  if(tipo==="email") return c.toLowerCase();
+  if(tipo==="aleatoria") return c.toLowerCase();
+  return "";
+}
+function pixPayload(o){
+  // o = {chave, tipo, nome, cidade, valor, txid}
+  const k=pixChaveNorm(o.chave,o.tipo); if(!k) return "";
+  const f=(id,v)=>id+String(v.length).padStart(2,"0")+v;
+  const tx=String(o.txid||"").replace(/[^A-Za-z0-9]/g,"").slice(0,25)||"***";
+  const valor=+o.valor>0?(+o.valor).toFixed(2):"";
+  let p=f("00","01")+f("26",f("00","br.gov.bcb.pix")+f("01",k))+f("52","0000")+f("53","986")+(valor?f("54",valor):"")+
+        f("58","BR")+f("59",(pixSemAcento(o.nome)||"SENOR X").slice(0,25).trim())+f("60",(pixSemAcento(o.cidade)||"BRASIL").slice(0,15).trim())+f("62",f("05",tx))+"6304";
+  let crc=0xFFFF;
+  for(let i=0;i<p.length;i++){ crc^=p.charCodeAt(i)<<8; for(let j=0;j<8;j++){ crc=(crc&0x8000)?((crc<<1)^0x1021):(crc<<1); crc&=0xFFFF; } }
+  return p+crc.toString(16).toUpperCase().padStart(4,"0");
+}
+function pixDoRestaurante(r,valor,txid){ return pixPayload({chave:r&&r.pix_chave,tipo:r&&r.pix_tipo,nome:(r&&r.pix_nome)||"Senor X",cidade:r&&r.pix_cidade,valor,txid}); }
+function pixQrSvg(texto,cor){
+  if(!texto||typeof qrcode==="undefined") return "";
+  const q=qrcode(0,"M"); q.addData(texto); q.make(); const n=q.getModuleCount(); let d="";
+  for(let y=0;y<n;y++) for(let x=0;x<n;x++) if(q.isDark(y,x)) d+=`M${x} ${y}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${n+4} ${n+4}" shape-rendering="crispEdges" style="width:100%;height:100%;display:block;background:#fff"><path fill="${cor||"#000"}" d="${d}"/></svg>`;
+}
+
+function pixTesteHtml(){
+  if(!REST.pix_chave) return `<p class="dica">Cadastre a chave Pix para os clientes receberem o QR code com o valor do pedido.</p>`;
+  const p=pixDoRestaurante(REST,1,"TESTE");
+  if(!p) return `<p class="dica" style="color:#b3261e"><b>Escolha o tipo da chave</b> (CPF, celular…) para gerar o QR code do Pix.</p>`;
+  return `<div style="display:flex;gap:12px;align-items:center;background:#f7f3ee;border-radius:10px;padding:10px">
+    <div style="width:96px;height:96px;flex:none">${pixQrSvg(p)}</div>
+    <div class="dica" style="margin:0"><b>Teste antes de usar:</b> abra o app do seu banco, escolha <b>Pix → Ler QR code</b> e aponte para este código (R$ 1,00). Confira se aparece o nome certo do recebedor. <b>Não precisa pagar</b>, só conferir e cancelar.</div></div>`;
+}
+
 /* ---------- vendas ---------- */
 let diaVendas=null, ABERTAS_V=[];
 function hojeISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
@@ -927,23 +996,83 @@ async function carregarVendas(){
   // o "dia" do restaurante vai das 06h até as 06h do dia seguinte (para contar quem fecha depois da meia-noite)
   const ini=new Date(diaVendas+"T06:00:00"), fim=new Date(ini.getTime()+86400000);
   const [fech,abert]=await Promise.all([
-    sb.from("comandas").select("*").eq("status","fechada").gte("fechada_em",ini.toISOString()).lt("fechada_em",fim.toISOString()).order("fechada_em",{ascending:false}),
+    sb.from("comandas").select("*").in("status",["fechada","cancelada"]).gte("fechada_em",ini.toISOString()).lt("fechada_em",fim.toISOString()).order("fechada_em",{ascending:false}),
     sb.from("comandas").select("*, pedidos(id,status), pedido_itens(nome,rotulo,obs,preco,qtd,cancelado,pedido_id)").eq("status","aberta").order("mesa")
   ]);
   if(fech.error){ $("vCorpo").innerHTML=`<div class="vazio">${esc(erroMsg(fech.error))}</div>`; return; }
-  const L=fech.data, porForma={}; let tot=0, taxa=0;
-  L.forEach(c=>{ porForma[c.forma_pagamento||"—"]=(porForma[c.forma_pagamento||"—"]||0)+(+c.total||0); tot+=+c.total||0; taxa+=+c.taxa_servico||0; });
+  CAIXA=resumoCaixa(fech.data||[]);
   ABERTAS_V=(abert.data||[]);
-  const ab=(abert.data||[]).map(c=>({...c,parcial:(c.pedido_itens||[]).filter(i=>!i.cancelado).reduce((s,i)=>s+i.preco*i.qtd,0)}));
+  const ab=ABERTAS_V.map(c=>({...c,parcial:(c.pedido_itens||[]).filter(i=>!i.cancelado).reduce((s,i)=>s+i.preco*i.qtd,0)}));
+  const K=CAIXA, L=K.fechadas, cx=lerCaixaDia(), lin=linV;
   const hora=s=>new Date(s).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
   $("vCorpo").className=""; $("vCorpo").innerHTML=`
-    <div class="promo"><div style="font-size:13px;color:var(--sub)">Total vendido (${L.length} conta${L.length===1?"":"s"} fechada${L.length===1?"":"s"})</div>
-      <div style="font:700 30px Georgia,serif;margin:4px 0">${brl(tot)}</div>
-      ${taxa?`<div class="dica">inclui ${brl(taxa)} de taxa de serviço</div>`:""}
-      <div style="margin-top:10px">${Object.entries(porForma).map(([f,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #f0ebe4"><span>${esc(f)}</span><b>${brl(v)}</b></div>`).join("")}</div>
+    <div class="promo"><div style="font-size:13px;color:var(--sub)">Total vendido (${L.length} conta${L.length===1?"":"s"})</div>
+      <div style="font:700 30px Georgia,serif;margin:4px 0">${brl(K.total)}</div>
+      ${L.length?`<div class="dica">Ticket médio ${brl(K.total/L.length)}${K.taxaServ?` · inclui ${brl(K.taxaServ)} de taxa de serviço`:""}${K.taxaEnt?` · ${brl(K.taxaEnt)} de taxas de entrega`:""}</div>`:""}
     </div>
-    ${ab.length?`<div class="promo"><b>Abertas agora (mesas e delivery)</b>${ab.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${rotuloComanda(c)} · desde ${hora(c.aberta_em)}</span><span style="display:flex;gap:8px;align-items:center"><b>${brl(c.parcial)}</b><button class="btn" style="padding:5px 9px" data-imp="${c.id}">🖨️</button></span></div>`).join("")}<div style="margin-top:10px">${escolherPapelHtml()}</div></div>`:""}
-    <div class="promo"><b>Contas fechadas</b>${L.map(c=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #f0ebe4"><span>${hora(c.fechada_em)} · ${rotuloComanda(c)} · ${esc(c.forma_pagamento||"")}</span><b>${brl(c.total)}</b></div>`).join("")||`<p class="dica">Nenhuma conta fechada neste dia.</p>`}</div>`;
+    ${ab.length?`<div class="promo" style="border:2px solid #E2A33B"><b>⚠️ Ainda abertas (${ab.length})</b><p class="dica">Feche estas contas antes de fazer o fechamento do caixa.</p>${ab.map(c=>lin(`${rotuloComanda(c)} · desde ${hora(c.aberta_em)}`,`${brl(c.parcial)} <button class="btn" style="padding:5px 9px;margin-left:6px" data-imp="${c.id}">🖨️</button>`)).join("")}</div>`:""}
+    <div class="promo"><b>💰 Por forma de pagamento</b>
+      ${K.formas.map(([f,v])=>lin(`${esc(f)} <span class="dica" style="display:inline">(${v.n})</span>`,brl(v.v))).join("")||`<p class="dica">Nenhuma venda neste dia.</p>`}
+      ${K.formas.length?`<p class="dica" style="margin-top:8px">Pix: confira no extrato do banco. Cartões: confira no relatório da maquininha.</p>`:""}
+    </div>
+    <div class="promo"><b>🍔 Por tipo de venda</b>
+      ${[["mesa","🍽️ Mesas"],["delivery","🛵 Delivery"],["retirada","🏃 Retirada"]].map(([k,n])=>lin(`${n} <span class="dica" style="display:inline">(${K.tipos[k].n})</span>`,brl(K.tipos[k].v))).join("")}
+      ${K.canc.n?lin(`<span style="color:#b3261e">Cancelados (${K.canc.n})</span>`,`<span style="color:#b3261e">${brl(K.canc.v)}</span>`):""}
+    </div>
+    ${K.entregadores.length?`<div class="promo"><b>🛵 Entregas por entregador</b>${K.entregadores.map(([n,v])=>lin(`${esc(n)} <span class="dica" style="display:inline">(${v.n} entrega${v.n===1?"":"s"})</span>`,`taxas ${brl(v.taxa)}`)).join("")}<p class="dica" style="margin-top:6px">Soma das taxas de entrega cobradas dos clientes, para ajudar no acerto com o entregador.</p></div>`:""}
+    <div class="promo"><b>🧾 Conferência do dinheiro</b>
+      <div class="lin" style="margin-top:6px"><div><label class="l">Troco inicial (fundo)</label><div class="pbox" style="display:flex;align-items:center;border:1px solid var(--borda);border-radius:10px;background:#fff"><span style="padding:0 6px;color:var(--sub);font-size:13px">R$</span><input id="cxFundo" inputmode="decimal" value="${cx.fundo?esc(precoEd(cx.fundo)):""}" placeholder="0,00" style="border:0;padding:10px 4px;width:100%;min-width:0;outline:none;font-size:16px;background:transparent"></div></div>
+      <div><label class="l">Contei na gaveta</label><div class="pbox" style="display:flex;align-items:center;border:1px solid var(--borda);border-radius:10px;background:#fff"><span style="padding:0 6px;color:var(--sub);font-size:13px">R$</span><input id="cxContado" inputmode="decimal" value="${cx.contado!=null&&cx.contado!==""?esc(precoEd(cx.contado)):""}" placeholder="0,00" style="border:0;padding:10px 4px;width:100%;min-width:0;outline:none;font-size:16px;background:transparent"></div></div></div>
+      <div id="cxRes">${cxResHtml()}</div>
+      <div style="margin:12px 0 8px">${escolherPapelHtml()}</div>
+      <button class="btn pri" id="cxImp" style="width:100%">🖨️ Imprimir fechamento do caixa</button>
+    </div>
+    <div class="promo"><b>Contas do dia</b>${L.concat(K.canceladas).sort((a,b)=>new Date(b.fechada_em)-new Date(a.fechada_em)).map(c=>lin(`${hora(c.fechada_em)} · ${rotuloComanda(c)} · ${c.status==="cancelada"?'<span style="color:#b3261e">cancelado</span>':esc(c.forma_pagamento||"")}`,c.status==="cancelada"?`<s>${brl(totalComanda(c))}</s>`:brl(c.total))).join("")||`<p class="dica">Nenhuma conta neste dia.</p>`}</div>`;
+}
+let CAIXA=null;
+function totalComanda(c){ return +c.total||0; }
+function formaNome(f){ f=String(f||"").trim(); const m={pix:"Pix",dinheiro:"Dinheiro",cartao:"Cartão (entrega)"}; return m[f]||f||"Não informado"; }
+function resumoCaixa(lista){
+  const fechadas=lista.filter(c=>c.status==="fechada"), canceladas=lista.filter(c=>c.status==="cancelada");
+  const K={fechadas,canceladas,total:0,taxaServ:0,taxaEnt:0,dinheiro:0,tipos:{mesa:{n:0,v:0},delivery:{n:0,v:0},retirada:{n:0,v:0}},canc:{n:canceladas.length,v:0},formas:{},entregadores:{}};
+  fechadas.forEach(c=>{ const v=+c.total||0, f=formaNome(c.forma_pagamento);
+    K.total+=v; K.taxaServ+=+c.taxa_servico||0; K.taxaEnt+=+c.taxa_entrega||0;
+    (K.formas[f]=K.formas[f]||{n:0,v:0}); K.formas[f].n++; K.formas[f].v+=v;
+    if(f==="Dinheiro") K.dinheiro+=v;
+    const t=K.tipos[c.tipo]||K.tipos.mesa; t.n++; t.v+=v;
+    if(c.tipo==="delivery"){ const n=c.entregador_nome||"(sem entregador)"; (K.entregadores[n]=K.entregadores[n]||{n:0,taxa:0}); K.entregadores[n].n++; K.entregadores[n].taxa+=+c.taxa_entrega||0; }
+  });
+  canceladas.forEach(c=>{ K.canc.v+=+c.total||0; });
+  K.formas=Object.entries(K.formas).sort((a,b)=>b[1].v-a[1].v);
+  K.entregadores=Object.entries(K.entregadores).sort((a,b)=>b[1].n-a[1].n);
+  return K;
+}
+function lerCaixaDia(){ try{ return JSON.parse(localStorage.getItem("senorx_caixa_"+diaVendas))||{}; }catch(e){ return {}; } }
+function gravarCaixaDia(o){ try{ localStorage.setItem("senorx_caixa_"+diaVendas,JSON.stringify(o)); }catch(e){} }
+$("abaVendas").addEventListener("input",e=>{
+  if(e.target.id!=="cxFundo"&&e.target.id!=="cxContado") return;
+  const cx=lerCaixaDia(); const v=e.target.value.trim();
+  if(e.target.id==="cxFundo") cx.fundo=lerPreco(v)||0; else cx.contado=v===""?null:(lerPreco(v)||0);
+  gravarCaixaDia(cx);
+  if(CAIXA&&$("cxRes")) $("cxRes").innerHTML=cxResHtml();
+});
+function linV(a,b,extra){ return `<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid #f0ebe4${extra||""}"><span>${a}</span><b style="white-space:nowrap">${b}</b></div>`; }
+function cxResHtml(){
+  const K=CAIXA, cx=lerCaixaDia(), esperado=(cx.fundo||0)+K.dinheiro, dif=cx.contado!=null&&cx.contado!==""?(+cx.contado)-esperado:null;
+  return linV("Vendas em dinheiro",brl(K.dinheiro))+linV("Deveria ter na gaveta",brl(esperado),";font-size:17px")+
+    (dif!=null?linV(Math.abs(dif)<0.005?"✅ Caixa confere":dif>0?"Sobrando":"⚠️ Faltando",`<span style="color:${Math.abs(dif)<0.005?"#1E7B4A":"#b3261e"}">${brl(Math.abs(dif))}</span>`):"");
+}
+function imprimirFechamento(){
+  const K=CAIXA; if(!K) return; const cx=lerCaixaDia(), esperado=(cx.fundo||0)+K.dinheiro;
+  const dia=new Date(diaVendas+"T12:00:00").toLocaleDateString("pt-BR");
+  const secoes=[
+    {titulo:"FORMAS DE PAGAMENTO",linhas:K.formas.map(([f,v])=>[`${f} (${v.n})`,brl(v.v)])},
+    {titulo:"TIPO DE VENDA",linhas:[["Mesas ("+K.tipos.mesa.n+")",brl(K.tipos.mesa.v)],["Delivery ("+K.tipos.delivery.n+")",brl(K.tipos.delivery.v)],["Retirada ("+K.tipos.retirada.n+")",brl(K.tipos.retirada.v)],...(K.canc.n?[["Cancelados ("+K.canc.n+")",brl(K.canc.v)]]:[])]},
+    {titulo:"EXTRAS",linhas:[["Contas",String(K.fechadas.length)],["Ticket médio",brl(K.fechadas.length?K.total/K.fechadas.length:0)],["Taxa de serviço",brl(K.taxaServ)],["Taxas de entrega",brl(K.taxaEnt)]]},
+    ...(K.entregadores.length?[{titulo:"ENTREGADORES",linhas:K.entregadores.map(([n,v])=>[`${n} (${v.n})`,"taxas "+brl(v.taxa)])}]:[]),
+    {titulo:"DINHEIRO NA GAVETA",linhas:[["Troco inicial",brl(cx.fundo||0)],["Vendas em dinheiro",brl(K.dinheiro)],["Deveria ter",brl(esperado),1],...(cx.contado!=null&&cx.contado!==""?[["Contado",brl(+cx.contado)],[Math.abs(cx.contado-esperado)<0.005?"Caixa confere":(cx.contado>esperado?"Sobra":"Falta"),brl(Math.abs(cx.contado-esperado)),1]]:[])]}
+  ];
+  imprimirConta({titulo:"FECHAMENTO DE CAIXA",sub:[dia+" (06h às 06h)",...(ABERTAS_V.length?[`ATENÇÃO: ${ABERTAS_V.length} conta(s) ainda aberta(s)`]:[])],itens:[],secoes,linhas:[],total:K.total,totalRotulo:"TOTAL VENDIDO",rodape:["Conferido por: ____________________"],rest:REST});
 }
 $("abaVendas").addEventListener("change",e=>{ if(e.target.id==="vDia"){ diaVendas=e.target.value; carregarVendas(); } });
 function imprimirComanda(c,itensSrc){
@@ -952,7 +1081,7 @@ function imprimirComanda(c,itensSrc){
   const sub=ag.reduce((s,i)=>s+i.preco*i.qtd,0);
   if(c.tipo==="mesa"){
     const taxa=Math.round(sub*10)/100;
-    imprimirConta({titulo:"CONTA · MESA "+c.mesa,sub:["Aberta às "+new Date(c.aberta_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})],itens:ag,linhas:[["Consumo",brl(sub)],["Serviço (10%) opcional",brl(taxa)]],total:sub+taxa,rodape:REST.pix_chave?["Pix: "+REST.pix_chave]:[],rest:REST});
+    imprimirConta({titulo:"CONTA · MESA "+c.mesa,sub:["Aberta às "+new Date(c.aberta_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})],itens:ag,linhas:[["Consumo",brl(sub)],["Serviço (10%) opcional",brl(taxa)]],total:sub+taxa,rodape:REST.pix_chave?["Pix: "+REST.pix_chave]:[],rest:REST,pix:pixDoRestaurante(REST,sub+taxa,"MESA"+c.mesa),pixValor:sub+taxa});
   } else {
     const tx=+c.taxa_entrega||0, tot=sub+tx, ent=c.tipo==="delivery";
     const PG={pix:"Pix",dinheiro:"Dinheiro",cartao:"Cartão"};
@@ -960,11 +1089,11 @@ function imprimirComanda(c,itensSrc){
     if(c.troco_para) rod.push(`Troco para ${brl(c.troco_para)}: levar ${brl(c.troco_para-tot)}`);
     if(c.obs_cliente) rod.push("Obs: "+c.obs_cliente);
     imprimirConta({titulo:(ent?"ENTREGA":"RETIRADA")+" · "+(c.codigo||""),sub:[c.cliente_nome||"",c.cliente_telefone||"",...(ent?[c.endereco||"",c.bairro_nome||""]:[])].filter(Boolean),
-      itens:ag,linhas:[["Subtotal",brl(sub)],...(ent?[["Entrega",brl(tx)]]:[])],total:tot,rodape:rod,rest:REST});
+      itens:ag,linhas:[["Subtotal",brl(sub)],...(ent?[["Entrega",brl(tx)]]:[])],total:tot,rodape:rod,rest:REST,...(c.forma_pagamento==="pix"&&c.pagamento_status!=="pago"?{pix:pixDoRestaurante(REST,tot,c.codigo),pixValor:tot}:{})});
   }
 }
 $("abaVendas").addEventListener("click",e=>{
-  const bi=e.target.closest("[data-imp]"); if(bi){ const c=ABERTAS_V.find(x=>x.id===bi.dataset.imp); if(c){ const pend=new Set((c.pedidos||[]).filter(p=>p.status==="aguardando").map(p=>p.id)); imprimirComanda(c,(c.pedido_itens||[]).filter(i=>!pend.has(i.pedido_id))); } return; } if(e.target.id==="vAtual") carregarVendas(); });
+  const bi=e.target.closest("[data-imp]"); if(bi){ const c=ABERTAS_V.find(x=>x.id===bi.dataset.imp); if(c){ const pend=new Set((c.pedidos||[]).filter(p=>p.status==="aguardando").map(p=>p.id)); imprimirComanda(c,(c.pedido_itens||[]).filter(i=>!pend.has(i.pedido_id))); } return; } if(e.target.id==="vAtual") carregarVendas(); if(e.target.id==="cxImp") imprimirFechamento(); });
 
 /* ---------- impressão de conta (não fiscal) ---------- */
 const K_PAPEL="senorx_papel";
@@ -994,11 +1123,13 @@ function imprimirConta(o){
     ${o.sub?`<div class="c">${o.sub.map(e).join("<br>")}</div>`:""}
     <div class="c">${agora.toLocaleDateString("pt-BR")} ${agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
     <hr>
-    ${o.itens.map(i=>`<div class="it"><div class="l"><span>${i.qtd}x ${e(i.nome)}${i.rotulo?" ("+e(i.rotulo)+")":""}</span><span>${f(i.preco*i.qtd)}</span></div>${i.obs?`<div class="ob">${e(i.obs)}</div>`:""}</div>`).join("")}
-    <hr>
+    ${(o.secoes||[]).map(s=>`<div class="b" style="margin-top:2mm">${e(s.titulo)}</div>${s.linhas.map(([a,v,neg])=>`<div class="l"${neg?' style="font-weight:bold"':""}><span>${e(a)}</span><span>${e(v)}</span></div>`).join("")}<hr>`).join("")}
+    ${(o.itens||[]).map(i=>`<div class="it"><div class="l"><span>${i.qtd}x ${e(i.nome)}${i.rotulo?" ("+e(i.rotulo)+")":""}</span><span>${f(i.preco*i.qtd)}</span></div>${i.obs?`<div class="ob">${e(i.obs)}</div>`:""}</div>`).join("")}
+    ${(o.itens||[]).length?"<hr>":""}
     ${(o.linhas||[]).map(([a,b])=>`<div class="l"><span>${e(a)}</span><span>${e(b)}</span></div>`).join("")}
-    <div class="l tot"><span>TOTAL</span><span>${f(o.total)}</span></div>
+    ${o.total!=null?`<div class="l tot"><span>${e(o.totalRotulo||"TOTAL")}</span><span>${f(o.total)}</span></div>`:""}
     ${(o.rodape||[]).length?`<hr>${o.rodape.map(x=>`<div class="c">${e(x)}</div>`).join("")}`:""}
+    ${o.pix&&typeof pixQrSvg==="function"&&pixQrSvg(o.pix)?`<hr><div class="c b">PAGUE COM PIX${o.pixValor?" · "+f(o.pixValor):""}</div><div style="width:${A4?"45mm":(W==="58"?"38mm":"46mm")};margin:2mm auto">${pixQrSvg(o.pix)}</div><div class="c" style="font-size:.85em">Abra o app do banco → Pix → Ler QR code</div>`:""}
     <hr><div class="c b">NÃO É DOCUMENTO FISCAL</div><div class="c">Obrigado pela preferência!</div>
   </div><script>window.onload=()=>{setTimeout(()=>{window.print();},150)};window.onafterprint=()=>{parent.postMessage("impresso","*")};<\/script></body></html>`;
   let fr=document.getElementById("frImpressao");
@@ -1013,6 +1144,25 @@ document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-papel]"
 (async()=>{
   const {data}=await sb.auth.getSession();
   if(data&&data.session&&!recuperando) await entrar(); else mostrarLogin();
+})();
+</script>
+<script>
+(function(){
+  if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(function(){});
+  var evt=null, inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  window.instalarApp=function(){ if(evt){ evt.prompt(); evt.userChoice.finally(function(){ evt=null; var b=document.getElementById("pwaBt"); if(b) b.remove(); }); return true; } return false; };
+  window.appInstalado=function(){ return !!inst; };
+  window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); evt=e; document.dispatchEvent(new Event("pwa-pronto"));
+    try{ if(localStorage.getItem("senorx_pwa_nao")) return; }catch(_){}
+    if(document.getElementById("pwaBt")) return;
+    var b=document.createElement("div"); b.id="pwaBt";
+    b.style.cssText="position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9999;display:flex;align-items:center;background:#CF7132;color:#fff;border-radius:24px;box-shadow:0 6px 18px rgba(0,0,0,.3);font:600 14px system-ui,sans-serif";
+    b.innerHTML='<button style="background:none;border:0;color:#fff;font:inherit;padding:10px 6px 10px 14px;cursor:pointer">📲 Instalar app</button><button aria-label="Fechar" style="background:none;border:0;color:#fff;font-size:18px;padding:6px 12px 6px 6px;cursor:pointer">×</button>';
+    b.children[0].onclick=window.instalarApp;
+    b.children[1].onclick=function(){ try{ localStorage.setItem("senorx_pwa_nao","1"); }catch(_){} b.remove(); };
+    document.body.appendChild(b);
+  });
+  window.addEventListener("appinstalled",function(){ inst=true; var b=document.getElementById("pwaBt"); if(b) b.remove(); });
 })();
 </script>
 </body>

@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#1B1512">
+<link rel="manifest" href="app-garcom.webmanifest">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Garçom SX">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -146,6 +153,7 @@ label.l{display:block;font-size:13px;color:var(--sub);margin:12px 0 6px;font-wei
 <div id="camada"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 const SUPABASE_URL="https://xcgwgqkvpquyrwxbpqqm.supabase.co", SUPABASE_KEY="sb_publishable_7cKmXXVOibhK1n49Y5l6vA_KpZlmM4i";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:"senorx-equipe"}});
@@ -440,7 +448,7 @@ async function enviar(){
 
 let RESTINFO=null;
 async function contaParaImprimir(c){
-  if(!RESTINFO){ const {data}=await sb.from("restaurante").select("slogan,telefone,endereco,pix_chave,pix_nome").eq("id",1).maybeSingle(); RESTINFO=data||{}; }
+  if(!RESTINFO){ const {data}=await sb.from("restaurante").select("*").eq("id",1).maybeSingle(); RESTINFO=data||{}; }
   const sub=subtotal(c);
   abrirFolha(`<h2>Imprimir conta · Mesa ${c.mesa}</h2><div class="sub">Consumo ${brl(sub)}</div>
     <label class="linha" style="align-items:center;cursor:pointer"><span>Incluir taxa de serviço (10%)</span><input type="checkbox" id="pTaxa" checked style="width:22px;height:22px"></label>
@@ -456,13 +464,15 @@ async function contaParaImprimir(c){
         const linhas=[["Consumo",brl(sub)]]; if(taxa) linhas.push(["Serviço (10%) opcional",brl(taxa)]);
         const rod=[]; if(div>1) rod.push(`Dividido por ${div}: ${brl(tot/div)} cada`);
         if(RESTINFO.pix_chave) rod.push("Pix: "+RESTINFO.pix_chave);
-        imprimirConta({titulo:"CONTA · MESA "+c.mesa,sub:[`Garçom: ${EU.nome}`,"Aberta às "+new Date(c.aberta_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})],itens:ag,linhas,total:tot,rodape:rod,rest:RESTINFO});
+        const vPix=div>1?Math.round(tot/div*100)/100:tot;
+        imprimirConta({titulo:"CONTA · MESA "+c.mesa,sub:[`Garçom: ${EU.nome}`,"Aberta às "+new Date(c.aberta_em).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})],itens:ag,linhas,total:tot,rodape:rod,rest:RESTINFO,pix:pixDoRestaurante(RESTINFO,vPix,"MESA"+c.mesa),pixValor:vPix});
         fecharFolha();
       };
     });
 }
-function fecharConta(c){
+async function fecharConta(c){
   let taxa=false, forma=null;
+  if(!RESTINFO){ const {data}=await sb.from("restaurante").select("*").eq("id",1).maybeSingle(); RESTINFO=data||{}; }
   const sub=subtotal(c);
   const desenhar=()=>{
     const tx=taxa?Math.round(sub*10)/100:0;
@@ -472,6 +482,10 @@ function fecharConta(c){
       <div class="linha" style="font-size:20px;border-top:1px solid var(--borda);padding-top:10px"><span>Total</span><b>${brl(sub+tx)}</b></div>
       <label class="l">Forma de pagamento</label>
       <div class="formas" id="fFormas">${["Dinheiro","Pix","Crédito","Débito"].map(x=>`<button class="${forma===x?"on":""}">${x}</button>`).join("")}</div>
+      ${forma==="Pix"?(()=>{ const p=pixDoRestaurante(RESTINFO,sub+tx,"MESA"+c.mesa); return p?`<div style="text-align:center;margin:12px 0">
+        <div style="font-size:14px;margin-bottom:6px">Mostre para o cliente: <b>Pix de ${brl(sub+tx)}</b></div>
+        <div style="width:220px;height:220px;margin:0 auto;border-radius:10px;overflow:hidden">${pixQrSvg(p)}</div>
+        <div class="dica" style="font-size:13px;color:var(--sub);margin-top:6px">O cliente abre o app do banco → Pix → Ler QR code. Confira o recebimento antes de liberar a mesa.</div></div>`:(RESTINFO.pix_chave?`<div class="dica" style="font-size:13px;margin:8px 0">Chave Pix: <b>${esc(RESTINFO.pix_chave)}</b></div>`:""); })():""}
       <button class="btn ok bloco" id="fOk"${forma?"":" disabled"}>Confirmar pagamento e liberar mesa</button>`,f=>{
         f.querySelector("#fTaxa").onchange=e=>{ taxa=e.target.checked; desenhar(); };
         f.querySelector("#fFormas").onclick=e=>{ if(e.target.tagName!=="BUTTON") return; forma=e.target.textContent; desenhar(); };
@@ -485,6 +499,50 @@ function fecharConta(c){
   };
   desenhar();
 }
+
+/* ---------- Pix com valor (BR Code / "copia e cola", padrão do Banco Central) ---------- */
+function pixSemAcento(s){ return String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 .\-]/g,"").replace(/\s+/g," ").trim(); }
+function pixTipoAdivinha(c){
+  c=String(c||"").trim(); const d=c.replace(/\D/g,"");
+  if(!c) return "";
+  if(c.includes("@")) return "email";
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(c)) return "aleatoria";
+  if(c.startsWith("+")||/[()]/.test(c)) return "telefone";
+  if(/^\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}$/.test(c)) return "cnpj";
+  if(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(c)) return "cpf";
+  if(d.length===10&&d===c.replace(/[\s-]/g,"")) return "telefone";
+  return "";
+}
+function pixChaveNorm(chave,tipo){
+  const c=String(chave||"").trim(), d=c.replace(/\D/g,"");
+  tipo=tipo||pixTipoAdivinha(c);
+  if(tipo==="cpf") return d.length===11?d:"";
+  if(tipo==="cnpj") return d.length===14?d:"";
+  if(tipo==="telefone"){ const n=(d.startsWith("55")&&d.length>=12)?d:"55"+d; return n.length>=12&&n.length<=13?"+"+n:""; }
+  if(tipo==="email") return c.toLowerCase();
+  if(tipo==="aleatoria") return c.toLowerCase();
+  return "";
+}
+function pixPayload(o){
+  // o = {chave, tipo, nome, cidade, valor, txid}
+  const k=pixChaveNorm(o.chave,o.tipo); if(!k) return "";
+  const f=(id,v)=>id+String(v.length).padStart(2,"0")+v;
+  const tx=String(o.txid||"").replace(/[^A-Za-z0-9]/g,"").slice(0,25)||"***";
+  const valor=+o.valor>0?(+o.valor).toFixed(2):"";
+  let p=f("00","01")+f("26",f("00","br.gov.bcb.pix")+f("01",k))+f("52","0000")+f("53","986")+(valor?f("54",valor):"")+
+        f("58","BR")+f("59",(pixSemAcento(o.nome)||"SENOR X").slice(0,25).trim())+f("60",(pixSemAcento(o.cidade)||"BRASIL").slice(0,15).trim())+f("62",f("05",tx))+"6304";
+  let crc=0xFFFF;
+  for(let i=0;i<p.length;i++){ crc^=p.charCodeAt(i)<<8; for(let j=0;j<8;j++){ crc=(crc&0x8000)?((crc<<1)^0x1021):(crc<<1); crc&=0xFFFF; } }
+  return p+crc.toString(16).toUpperCase().padStart(4,"0");
+}
+function pixDoRestaurante(r,valor,txid){ return pixPayload({chave:r&&r.pix_chave,tipo:r&&r.pix_tipo,nome:(r&&r.pix_nome)||"Senor X",cidade:r&&r.pix_cidade,valor,txid}); }
+function pixQrSvg(texto,cor){
+  if(!texto||typeof qrcode==="undefined") return "";
+  const q=qrcode(0,"M"); q.addData(texto); q.make(); const n=q.getModuleCount(); let d="";
+  for(let y=0;y<n;y++) for(let x=0;x<n;x++) if(q.isDark(y,x)) d+=`M${x} ${y}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${n+4} ${n+4}" shape-rendering="crispEdges" style="width:100%;height:100%;display:block;background:#fff"><path fill="${cor||"#000"}" d="${d}"/></svg>`;
+}
+
 
 /* ---------- impressão de conta (não fiscal) ---------- */
 const K_PAPEL="senorx_papel";
@@ -514,11 +572,13 @@ function imprimirConta(o){
     ${o.sub?`<div class="c">${o.sub.map(e).join("<br>")}</div>`:""}
     <div class="c">${agora.toLocaleDateString("pt-BR")} ${agora.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}</div>
     <hr>
-    ${o.itens.map(i=>`<div class="it"><div class="l"><span>${i.qtd}x ${e(i.nome)}${i.rotulo?" ("+e(i.rotulo)+")":""}</span><span>${f(i.preco*i.qtd)}</span></div>${i.obs?`<div class="ob">${e(i.obs)}</div>`:""}</div>`).join("")}
-    <hr>
+    ${(o.secoes||[]).map(s=>`<div class="b" style="margin-top:2mm">${e(s.titulo)}</div>${s.linhas.map(([a,v,neg])=>`<div class="l"${neg?' style="font-weight:bold"':""}><span>${e(a)}</span><span>${e(v)}</span></div>`).join("")}<hr>`).join("")}
+    ${(o.itens||[]).map(i=>`<div class="it"><div class="l"><span>${i.qtd}x ${e(i.nome)}${i.rotulo?" ("+e(i.rotulo)+")":""}</span><span>${f(i.preco*i.qtd)}</span></div>${i.obs?`<div class="ob">${e(i.obs)}</div>`:""}</div>`).join("")}
+    ${(o.itens||[]).length?"<hr>":""}
     ${(o.linhas||[]).map(([a,b])=>`<div class="l"><span>${e(a)}</span><span>${e(b)}</span></div>`).join("")}
-    <div class="l tot"><span>TOTAL</span><span>${f(o.total)}</span></div>
+    ${o.total!=null?`<div class="l tot"><span>${e(o.totalRotulo||"TOTAL")}</span><span>${f(o.total)}</span></div>`:""}
     ${(o.rodape||[]).length?`<hr>${o.rodape.map(x=>`<div class="c">${e(x)}</div>`).join("")}`:""}
+    ${o.pix&&typeof pixQrSvg==="function"&&pixQrSvg(o.pix)?`<hr><div class="c b">PAGUE COM PIX${o.pixValor?" · "+f(o.pixValor):""}</div><div style="width:${A4?"45mm":(W==="58"?"38mm":"46mm")};margin:2mm auto">${pixQrSvg(o.pix)}</div><div class="c" style="font-size:.85em">Abra o app do banco → Pix → Ler QR code</div>`:""}
     <hr><div class="c b">NÃO É DOCUMENTO FISCAL</div><div class="c">Obrigado pela preferência!</div>
   </div><script>window.onload=()=>{setTimeout(()=>{window.print();},150)};window.onafterprint=()=>{parent.postMessage("impresso","*")};<\/script></body></html>`;
   let fr=document.getElementById("frImpressao");
@@ -535,6 +595,25 @@ document.addEventListener("click",ev=>{ const b=ev.target.closest("[data-papel]"
   if(data&&data.session) iniciar(); else mostrar("tLogin");
 })();
 setInterval(()=>{ if(tela.nome==="mesas"&&$("camada").innerHTML===""&&EU) telaMesas(); },60000);
+</script>
+<script>
+(function(){
+  if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(function(){});
+  var evt=null, inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  window.instalarApp=function(){ if(evt){ evt.prompt(); evt.userChoice.finally(function(){ evt=null; var b=document.getElementById("pwaBt"); if(b) b.remove(); }); return true; } return false; };
+  window.appInstalado=function(){ return !!inst; };
+  window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); evt=e; document.dispatchEvent(new Event("pwa-pronto"));
+    try{ if(localStorage.getItem("senorx_pwa_nao")) return; }catch(_){}
+    if(document.getElementById("pwaBt")) return;
+    var b=document.createElement("div"); b.id="pwaBt";
+    b.style.cssText="position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:9999;display:flex;align-items:center;background:#CF7132;color:#fff;border-radius:24px;box-shadow:0 6px 18px rgba(0,0,0,.3);font:600 14px system-ui,sans-serif";
+    b.innerHTML='<button style="background:none;border:0;color:#fff;font:inherit;padding:10px 6px 10px 14px;cursor:pointer">📲 Instalar app</button><button aria-label="Fechar" style="background:none;border:0;color:#fff;font-size:18px;padding:6px 12px 6px 6px;cursor:pointer">×</button>';
+    b.children[0].onclick=window.instalarApp;
+    b.children[1].onclick=function(){ try{ localStorage.setItem("senorx_pwa_nao","1"); }catch(_){} b.remove(); };
+    document.body.appendChild(b);
+  });
+  window.addEventListener("appinstalled",function(){ inst=true; var b=document.getElementById("pwaBt"); if(b) b.remove(); });
+})();
 </script>
 </body>
 </html>
