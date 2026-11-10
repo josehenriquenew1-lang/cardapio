@@ -165,7 +165,7 @@ textarea.t{resize:vertical;min-height:44px}
       <button data-a="promos">Promoções</button>
       <button data-a="vendas">Vendas</button>
       <button data-a="ind">Indicadores</button>
-      <button data-a="impressos">Impressos</button>
+      <button data-a="impressos">Impressos e WhatsApp</button>
       <button data-a="equipe">Equipe e mesas</button>
       <button data-a="rest">Restaurante</button>
     </nav>
@@ -817,8 +817,10 @@ function renderImpressos(){
       <p class="dica">Para Instagram, WhatsApp, panfleto ou balcão (abre o cardápio com delivery).</p>
       <div style="display:flex;gap:14px;align-items:center;margin-top:8px"><div id="qrGeralPrev" style="width:110px;height:110px;background:#F1E4D3;padding:6px;border-radius:8px"></div>
       <div style="flex:1"><input class="t" readonly value="${base}" onclick="this.select()"><button class="btn" id="qBaixar" style="margin-top:8px">⬇️ Baixar imagem do QR</button></div></div>
-    </div>`;
+    </div>
+    ${blocoWhats(base)}`;
   $("qrGeralPrev").innerHTML=qrSvgAdmin(base);
+  if($("qrZapPrev")) $("qrZapPrev").innerHTML=qrSvgAdmin(linkZap());
 }
 function qrSvgAdmin(texto){
   const q=qrcode(0,"M"); q.addData(unescape(encodeURIComponent(texto))); q.make(); const n=q.getModuleCount(); let d="";
@@ -856,11 +858,64 @@ $("abaImpressos").addEventListener("click",e=>{
     gerarDisplays(lista); status(`${lista.length} displays gerados`);
   }
   if(e.target.id==="qBaixar"){
-    const svg=$("qrGeralPrev").querySelector("svg"), n=+svg.getAttribute("viewBox").split(" ")[2], esc=24, borda=4, tam=(n+borda*2)*esc;
-    const cv=document.createElement("canvas"); cv.width=cv.height=tam; const cx=cv.getContext("2d"); cx.fillStyle="#F1E4D3"; cx.fillRect(0,0,tam,tam);
-    const img=new Image(); img.onload=()=>{ cx.drawImage(img,borda*esc,borda*esc,n*esc,n*esc); const a=document.createElement("a"); a.href=cv.toDataURL("image/png"); a.download="qrcode-cardapio-senorx.png"; a.click(); };
-    img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+    baixarQrSvg($("qrGeralPrev").querySelector("svg"),"qrcode-cardapio-senorx.png");
   }
+});
+
+/* ---------- WhatsApp ---------- */
+const K_ZAP="senorx_msgs_whats";
+function telZap(){ let n=String(REST.whatsapp||REST.telefone||"").replace(/\D/g,""); if(n.length>=10&&n.length<=11) n="55"+n; return n; }
+function msgsZap(base){
+  let m={}; try{ m=JSON.parse(localStorage.getItem(K_ZAP))||{}; }catch(e){}
+  const nome=REST.nome||"Señor X Hamburgueria";
+  return {
+    cliente: m.cliente ?? "Olá! Quero fazer um pedido 🍔",
+    saudacao: m.saudacao ?? `Olá! 👋 Que bom te ver na ${nome} 🍔\n\nFaça seu pedido pelo nosso cardápio online. É rápido, você vê as fotos e os preços e acompanha o pedido até chegar:\n👉 ${base}\n\n🛵 Delivery ou retirada\n💳 Pix ou pagamento na entrega\n\nSe preferir, é só responder aqui que a gente te atende!`,
+    ausencia: m.ausencia ?? `Olá! 👋 No momento estamos fechados.${REST.horario?"\n🕒 Nosso horário: "+REST.horario:""}\n\nVocê já pode ver o cardápio aqui:\n👉 ${base}\n\nAssim que abrirmos, respondemos sua mensagem!`
+  };
+}
+function linkZap(){ const n=telZap(); if(!n) return ""; let txt=""; try{ txt=(JSON.parse(localStorage.getItem(K_ZAP))||{}).cliente; }catch(e){} txt=txt??"Olá! Quero fazer um pedido 🍔"; return `https://wa.me/${n}${txt?"?text="+encodeURIComponent(txt):""}`; }
+function blocoWhats(base){
+  const n=telZap(), m=msgsZap(base);
+  const area=(id,titulo,dica,val,rows)=>`<label class="l">${titulo}</label><textarea class="t" rows="${rows}" id="${id}" data-zap="${id.slice(1).toLowerCase()}">${esc(val)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><button class="btn" data-copiar="${id}">📋 Copiar mensagem</button></div><p class="dica">${dica}</p>`;
+  return `<div class="promo"><b>💬 Pedidos pelo WhatsApp</b>
+    ${!n?`<p class="dica" style="color:#b3261e"><b>Cadastre o número do WhatsApp</b> na aba Restaurante para gerar o link.</p>`:`
+    <p class="dica">Quando o cliente chamar no WhatsApp, ele recebe <b>automaticamente</b> a mensagem com o link do cardápio online e faz o pedido por lá.</p>
+    <p style="margin:14px 0 4px"><b>1. Link "Pedir pelo WhatsApp"</b></p>
+    <p class="dica">Coloque na bio do Instagram, no Google, em panfletos. Ao tocar, abre o WhatsApp do restaurante com a mensagem já escrita.</p>
+    <label class="l">Mensagem que o cliente manda</label><input class="t" id="zCliente" data-zap="cliente" value="${esc(m.cliente)}">
+    <div style="display:flex;gap:14px;align-items:center;margin-top:8px"><div id="qrZapPrev" style="width:110px;height:110px;background:#F1E4D3;padding:6px;border-radius:8px;flex:none"></div>
+      <div style="flex:1;min-width:0"><input class="t" readonly id="zLink" value="${esc(linkZap())}" onclick="this.select()">
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn" data-copiar="zLink">📋 Copiar link</button><button class="btn" id="zBaixar">⬇️ QR</button><a class="btn" id="zTestar" href="${esc(linkZap())}" target="_blank" rel="noopener" style="text-decoration:none">Testar</a></div></div></div>
+    <p style="margin:18px 0 4px"><b>2. Resposta automática (WhatsApp Business)</b></p>
+    ${area("zSaudacao","Mensagem de saudação",`No celular do restaurante, abra o <b>WhatsApp Business</b> → <b>Configurações</b> (ou ⋮) → <b>Ferramentas comerciais</b> → <b>Mensagem de saudação</b> → ative, apague o texto que está lá e cole este. Ela é enviada sozinha quando um cliente chama pela 1ª vez ou depois de 14 dias sem conversar.`,m.saudacao,9)}
+    ${area("zAusencia","Mensagem de ausência (fora do horário)",`Em <b>Ferramentas comerciais</b> → <b>Mensagem de ausência</b> → ative, cole o texto e em <b>Programar</b> escolha <b>Fora do horário comercial</b> (o horário fica no Perfil comercial).`,m.ausencia,6)}
+    <p class="dica" style="margin-top:10px">💡 Dica: em <b>Ferramentas comerciais → Respostas rápidas</b>, crie o atalho <b>/cardapio</b> com a mensagem de saudação. Aí, no meio de qualquer conversa, é só digitar /cardapio para mandar o link.</p>
+    <button class="btn" id="zPadrao" style="margin-top:6px">↩️ Voltar os textos ao padrão</button>`}
+  </div>`;
+}
+$("abaImpressos").addEventListener("input",e=>{
+  const k=e.target.dataset.zap; if(!k) return;
+  let m={}; try{ m=JSON.parse(localStorage.getItem(K_ZAP))||{}; }catch(_){}
+  m[k]=e.target.value; try{ localStorage.setItem(K_ZAP,JSON.stringify(m)); }catch(_){}
+  if(k==="cliente"){ const l=linkZap(); $("zLink").value=l; $("zTestar").href=l; $("qrZapPrev").innerHTML=qrSvgAdmin(l); }
+});
+async function copiarTexto(el,btn){
+  const v=el.value; const ant=btn.textContent;
+  try{ await navigator.clipboard.writeText(v); }catch(e){ el.focus(); el.select(); try{ document.execCommand("copy"); }catch(_){} }
+  btn.textContent="Copiado ✓"; setTimeout(()=>btn.textContent=ant,1800);
+}
+function baixarQrSvg(svg,nome){
+  const n=+svg.getAttribute("viewBox").split(" ")[2], esc2=24, borda=4, tam=(n+borda*2)*esc2;
+  const cv=document.createElement("canvas"); cv.width=cv.height=tam; const cx=cv.getContext("2d"); cx.fillStyle="#F1E4D3"; cx.fillRect(0,0,tam,tam);
+  const img=new Image(); img.onload=()=>{ cx.drawImage(img,borda*esc2,borda*esc2,n*esc2,n*esc2); const a=document.createElement("a"); a.href=cv.toDataURL("image/png"); a.download=nome; a.click(); };
+  img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+}
+$("abaImpressos").addEventListener("click",e=>{
+  const c=e.target.closest("[data-copiar]"); if(c) return copiarTexto($(c.dataset.copiar),c);
+  if(e.target.id==="zBaixar") return baixarQrSvg($("qrZapPrev").querySelector("svg"),"qrcode-whatsapp-senorx.png");
+  if(e.target.id==="zPadrao"){ try{ localStorage.removeItem(K_ZAP); }catch(_){} renderImpressos(); status("Textos voltaram ao padrão"); }
 });
 
 /* ---------- vendas ---------- */
