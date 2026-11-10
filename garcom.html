@@ -303,7 +303,7 @@ function telaMesa(){
       if(error) aviso(erroMsg(error),"erro"); else { aviso(b.dataset.c==="confirmar"?"Enviado para a cozinha ✓":"Pedido recusado","neutro"); await carregarMesas(); render(); }
       return;
     }
-    if(b.dataset.c==="entregue"){ b.disabled=true; const {error}=await sb.from("pedidos").update({status:"entregue"}).eq("id",b.closest("[data-p]").dataset.p); if(error) aviso(erroMsg(error),"erro"); else { await carregarMesas(); render(); } }
+    if(b.dataset.c==="entregue"){ b.disabled=true; const {error}=await sb.rpc("marcar_entregue_mesa",{p_pedido:b.closest("[data-p]").dataset.p}); if(error) aviso(erroMsg(error),"erro"); else { await carregarMesas(); render(); } }
     if(b.dataset.c==="cancelar"){
       if(!b.dataset.ok){ b.dataset.ok=1; b.textContent="toque de novo para cancelar"; setTimeout(()=>{ delete b.dataset.ok; b.textContent="cancelar"; },4000); return; }
       const {error}=await sb.from("pedido_itens").update({cancelado:true}).eq("id",b.closest("[data-i]").dataset.i);
