@@ -80,6 +80,58 @@ footer b{color:var(--laranja2);font:500 12px Oswald;letter-spacing:.14em;text-tr
 @keyframes g{to{transform:rotate(360deg)}}
 .erro{text-align:center;padding:40px 20px;color:var(--suave)}
 .erro button{margin-top:12px;background:var(--laranja);color:var(--fundo);border:0;border-radius:20px;padding:10px 18px;font:600 14px Inter;cursor:pointer}
+
+/* ---------- pedido online ---------- */
+.it{position:relative}
+.it.pedivel .r{padding-right:46px}
+.it.pedivel>p,.it.pedivel>.o{padding-right:46px}
+.add{position:absolute;right:0;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:0;background:var(--laranja);color:var(--fundo);font:700 22px/1 Inter,sans-serif;cursor:pointer;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.add .qn{font-size:14px}
+.qd div.pedivel{cursor:pointer}
+.qd div .mini{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--laranja);color:var(--fundo);font:700 14px Inter;margin-left:6px}
+.bt-lista{display:block;width:100%;margin-top:12px;background:var(--laranja);color:var(--fundo);border:0;border-radius:12px;padding:13px;font:700 15px Inter;cursor:pointer}
+.sacola{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:30;background:var(--laranja);color:var(--fundo);border:0;border-radius:16px;padding:15px 18px;font:700 16px Inter;display:flex;justify-content:space-between;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer;max-width:636px;margin:0 auto}
+.sacola .ct{background:var(--fundo);color:var(--laranja);border-radius:20px;min-width:26px;height:26px;display:inline-grid;place-items:center;padding:0 7px;margin-right:10px;font-size:14px}
+body.com-sacola footer{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+.acomp{max-width:660px;margin:12px auto 0;padding:0 18px}
+.acomp button{width:100%;background:#2a201b;border:1px solid var(--laranja);color:var(--creme);border-radius:12px;padding:12px;font:600 14px Inter;cursor:pointer}
+.veu{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40}
+.folha{position:fixed;left:0;right:0;bottom:0;z-index:41;background:#231b17;color:var(--creme);border-radius:20px 20px 0 0;max-height:92vh;overflow:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.5);max-width:680px;margin:0 auto;-webkit-overflow-scrolling:touch}
+.folha h2{font:800 22px "Playfair Display",serif;margin:0 0 4px}
+.folha .sub{color:var(--suave);font-size:14px;margin-bottom:12px;line-height:1.45}
+.folha .fx{float:right;background:none;border:0;color:var(--suave);font-size:26px;line-height:1;cursor:pointer;margin:-4px -4px 0 8px}
+.folha label.l{display:block;font:600 12.5px Inter;color:var(--suave);margin:14px 0 6px;letter-spacing:.03em}
+.folha .t{width:100%;background:#1B1512;border:1px solid #4a3a30;border-radius:10px;padding:12px;color:var(--creme);font:16px Inter}
+.folha .t:focus{outline:2px solid rgba(207,113,50,.5);border-color:var(--laranja)}
+.folha select.t{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,#CF7132 50%),linear-gradient(135deg,#CF7132 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+.ops{display:flex;flex-wrap:wrap;gap:8px}
+.ops button{background:#1B1512;border:1px solid #4a3a30;color:var(--creme);border-radius:22px;padding:10px 14px;font:500 14px Inter;cursor:pointer}
+.ops button.on{background:var(--laranja);border-color:var(--laranja);color:var(--fundo);font-weight:700}
+.qtd{display:flex;align-items:center;justify-content:center;gap:20px;margin:16px 0 6px}
+.qtd button{width:48px;height:48px;border-radius:50%;border:1px solid #4a3a30;background:#1B1512;color:var(--creme);font-size:24px;cursor:pointer}
+.qtd b{font:700 26px Inter;min-width:36px;text-align:center}
+.pri{display:block;width:100%;margin-top:16px;background:var(--laranja);color:var(--fundo);border:0;border-radius:14px;padding:16px;font:700 16px Inter;cursor:pointer}
+.pri:disabled{opacity:.5}
+.sec{display:block;width:100%;margin-top:10px;background:none;color:var(--creme);border:1px solid #4a3a30;border-radius:14px;padding:14px;font:600 15px Inter;cursor:pointer}
+.lsac{display:flex;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--linha)}
+.lsac .n{flex:1;min-width:0}.lsac .n b{font:500 15px Oswald,sans-serif;text-transform:uppercase;color:var(--laranja2);letter-spacing:.03em}.lsac .n small{display:block;color:var(--suave);font-size:12.5px}
+.lsac .m{display:flex;align-items:center;gap:8px}
+.lsac .m button{width:30px;height:30px;border-radius:50%;border:1px solid #4a3a30;background:#1B1512;color:var(--creme);font-size:17px;cursor:pointer}
+.tot{display:flex;justify-content:space-between;padding:5px 0;font-size:15px}
+.tot.g{font:800 20px "Playfair Display",serif;border-top:1px solid var(--linha);margin-top:6px;padding-top:12px}
+.erro-f{background:#5a1f17;color:#ffd2cb;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:14px}
+.aviso-f{background:#3a2d1b;color:#ffd77a;border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13.5px}
+.codigo{font:800 40px Inter;letter-spacing:.18em;text-align:center;color:var(--laranja);margin:6px 0}
+.pix{background:#1B1512;border:1px dashed var(--laranja);border-radius:12px;padding:14px;margin-top:12px;text-align:center}
+.pix b{display:block;font:700 18px Inter;word-break:break-all;margin:4px 0 10px}
+.etapas{margin:16px 0 4px;padding:0;list-style:none}
+.etapas li{position:relative;padding:0 0 16px 30px;color:#7d6e62;font-size:15px}
+.etapas li:before{content:"";position:absolute;left:6px;top:4px;width:12px;height:12px;border-radius:50%;border:2px solid #5a4a3f;background:var(--fundo)}
+.etapas li:after{content:"";position:absolute;left:12px;top:20px;bottom:0;width:2px;background:#3a2d25}
+.etapas li:last-child:after{display:none}
+.etapas li.ok{color:var(--creme)}.etapas li.ok:before{background:var(--laranja);border-color:var(--laranja)}
+.etapas li.atual{color:var(--creme);font-weight:700}.etapas li.atual:before{background:var(--ok,#3fa34d);border-color:#3fa34d;box-shadow:0 0 0 4px rgba(63,163,77,.25)}
+.fechado{max-width:660px;margin:12px auto 0;padding:0 18px}.fechado div{background:#2a201b;border:1px solid #4a3a30;border-radius:12px;padding:12px;text-align:center;color:var(--suave);font-size:14px}
 </style>
 </head>
 <body>
@@ -89,10 +141,13 @@ footer b{color:var(--laranja2);font:500 12px Oswald;letter-spacing:.14em;text-tr
   <div class="orn"><i></i><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><i></i></div>
   <div class="status" id="status"></div>
 </header>
+<div id="acomp"></div><div id="fechado"></div>
 <div id="promos"></div>
 <nav id="nav"></nav>
 <main id="main"><div class="carregando"><div class="sp"></div>Carregando cardápio…</div></main>
 <footer id="rodape"></footer>
+<button class="sacola" id="sacola" style="display:none"></button>
+<div id="camada"></div>
 
 <script>
 const SUPABASE_URL = "https://xcgwgqkvpquyrwxbpqqm.supabase.co";
@@ -125,12 +180,13 @@ async function api(caminho){
   return r.json();
 }
 async function carregar(){
-  const [rest,secoes,promos]=await Promise.all([
+  const [rest,secoes,promos,bairros]=await Promise.all([
     api("restaurante?select=*&id=eq.1"),
     api("secoes?select=*,itens(*)&ativo=eq.true&order=ordem.asc&itens.order=ordem.asc"),
-    api("promocoes?select=*&ativo=eq.true&order=ordem.asc").catch(()=>[])
+    api("promocoes?select=*&ativo=eq.true&order=ordem.asc").catch(()=>[]),
+    api("bairros?select=*&ativo=eq.true&order=ordem.asc,nome.asc").catch(()=>[])
   ]);
-  return {restaurante:rest[0]||{},secoes,promos,em:Date.now()};
+  return {restaurante:rest[0]||{},secoes,promos,bairros,em:Date.now()};
 }
 
 function promoAtiva(p,hoje){
@@ -146,8 +202,11 @@ function textoDias(p){
   return "Válida: "+nomes.join(", ");
 }
 
+let DADOS=null;
 function render(D){
+  DADOS=D;
   const r=D.restaurante||{};
+  const PED=pedidosAbertos(r);
   document.getElementById("slogan").textContent=r.slogan||"Hamburgueria";
   // promoções
   const hoje=new Date();
@@ -162,15 +221,16 @@ function render(D){
     .filter(s=>s.tipo==="listas"||s.itens.length);
   document.getElementById("nav").innerHTML=secoes.filter(s=>s.tipo!=="quadro").map(s=>`<a href="#${slug(s.titulo)}">${esc(s.titulo)}</a>`).join("");
   document.getElementById("main").innerHTML=secoes.map(s=>{
-    if(s.tipo==="quadro") return `<section id="${slug(s.titulo)}" style="padding-top:14px"><div class="qd"><h4>${esc(s.titulo)}</h4>${s.itens.map(i=>`<div><span>${esc(i.nome)}</span><b>${brl((i.precos||[])[0]?.valor)}</b></div>`).join("")}</div></section>`;
+    if(s.tipo==="quadro") return `<section id="${slug(s.titulo)}" style="padding-top:14px"><div class="qd"><h4>${esc(s.titulo)}</h4>${s.itens.map(i=>`<div${PED&&temPreco(i)?` class="pedivel" data-add="${i.id}"`:""}><span>${esc(i.nome)}${PED&&temPreco(i)?'<span class="mini">+</span>':""}</span><b>${brl((i.precos||[])[0]?.valor)}</b></div>`).join("")}</div>${PED?'<p style="font-size:12px;color:var(--suave);text-align:center;margin:6px 0 0">Toque para adicionar ao pedido</p>':""}</section>`;
     let h=`<section id="${slug(s.titulo)}"><div class="sh">${icone(s.icone)}<h2>${esc(s.titulo)}${s.subtitulo?` <small>${esc(s.subtitulo)}</small>`:""}</h2></div>`;
     if(s.tipo==="listas"){
       h+=`<div class="ls">${(s.listas||[]).map(l=>`<div><h4>${esc(l.titulo)}</h4><p>${(l.opcoes||[]).map(esc).join("<br>")}</p></div>`).join("")}</div>
-        <div class="r ls-p"><span class="nt">${esc(s.nota)}</span><span class="pr">${brl(s.preco)}</span></div>`;
+        <div class="r ls-p"><span class="nt">${esc(s.nota)}</span><span class="pr">${brl(s.preco)}</span></div>
+        ${PED&&s.preco!=null?`<button class="bt-lista" data-addsec="${s.id}">+ Montar ${esc(s.titulo.replace(/s$/i,"").toLowerCase())}</button>`:""}`;
     } else {
-      h+=s.itens.map(i=>`<div class="it"><div class="r"><h3>${esc(i.nome)}${i.selo&&SELOS[i.selo]?`<span class="selo ${esc(i.selo)}">${SELOS[i.selo]}</span>`:""}</h3>
+      h+=s.itens.map(i=>`<div class="it${PED&&temPreco(i)?" pedivel":""}"><div class="r"><h3>${esc(i.nome)}${i.selo&&SELOS[i.selo]?`<span class="selo ${esc(i.selo)}">${SELOS[i.selo]}</span>`:""}</h3>
         <div class="ps">${(i.precos||[]).map(p=>`<span class="pr">${brl(p.valor)}${p.rotulo?`<em>${esc(p.rotulo)}</em>`:""}</span>`).join("")}</div></div>
-        ${i.descricao?`<p>${esc(i.descricao)}</p>`:""}${i.obs?`<div class="o">${esc(i.obs)}</div>`:""}</div>`).join("");
+        ${i.descricao?`<p>${esc(i.descricao)}</p>`:""}${i.obs?`<div class="o">${esc(i.obs)}</div>`:""}${PED&&temPreco(i)?`<button class="add" data-add="${i.id}" aria-label="Adicionar ${esc(i.nome)}">${qtdItem(i.id)?`<span class="qn">${qtdItem(i.id)}</span>`:"+"}</button>`:""}</div>`).join("");
     }
     return h+"</section>";
   }).join("");
@@ -184,6 +244,9 @@ function render(D){
     ${r.horario?`<p><b>Horário</b><br>${esc(r.horario).replace(/\n/g,"<br>")}</p>`:""}
     ${r.endereco?`<p>${esc(r.endereco)}</p>`:""}
     <p style="font-size:11px;opacity:.7">Preços sujeitos a alteração.</p>`;
+  document.getElementById("fechado").innerHTML = (r.delivery_ativo||r.retirada_ativo)&&r.aceitando_pedidos===false ? `<div>No momento não estamos recebendo pedidos pelo site.${tel?` Fale com a gente pelo WhatsApp.`:""}</div>`:"";
+  limparSacolaInvalida(); barraSacola(); mostrarAcompanhar();
+  if(!render.ligado){ render.ligado=true; ligarCliques(); }
   marcarNav();
 }
 
@@ -205,6 +268,219 @@ async function iniciar(){
     if(cache){ document.getElementById("status").textContent="Sem conexão: mostrando o último cardápio carregado."; }
     else document.getElementById("main").innerHTML=`<div class="erro">Não foi possível carregar o cardápio agora.<br><button onclick="location.reload()">Tentar de novo</button></div>`;
   }
+}
+
+/* =========================================================
+   PEDIDO ONLINE (delivery e retirada)
+   ========================================================= */
+const K_SAC="senorx_sacola", K_CLI="senorx_cliente", K_ULT="senorx_ultimo_pedido";
+const ler=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v??d; }catch(e){ return d; } };
+const gravar=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} };
+let SACOLA=ler(K_SAC,[]);
+const OBS_RAP=["Sem cebola","Sem salada","Sem molho","Bem passado","Ao ponto"];
+const pedidosAbertos=r=>r&&r.aceitando_pedidos!==false&&(r.delivery_ativo!==false||r.retirada_ativo!==false)&&(r.delivery_ativo!==undefined);
+const temPreco=i=>(i.precos||[]).some(p=>p.valor!=null&&p.valor!=="");
+const qtdItem=id=>SACOLA.filter(x=>x.item_id===id).reduce((s,x)=>s+x.qtd,0);
+const subSacola=()=>SACOLA.reduce((s,x)=>s+x.preco*x.qtd,0);
+function acharItem(id){ for(const s of DADOS.secoes) for(const i of (s.itens||[])) if(i.id===id) return i; return null; }
+function limparSacolaInvalida(){
+  // remove itens que saíram do cardápio e atualiza preços
+  if(!DADOS) return;
+  SACOLA=SACOLA.filter(x=>{
+    if(x.item_id){ const i=acharItem(x.item_id); if(!i||i.oculto) return false; const p=(i.precos||[])[x.preco_idx]; if(!p||p.valor==null) return false; x.preco=+p.valor; x.nome=i.nome; return true; }
+    const s=DADOS.secoes.find(s=>s.id===x.secao_id); if(!s||s.preco==null) return false; x.preco=+s.preco; return true;
+  });
+  gravar(K_SAC,SACOLA);
+}
+function barraSacola(){
+  const b=document.getElementById("sacola"), n=SACOLA.reduce((s,x)=>s+x.qtd,0);
+  const ok=n&&pedidosAbertos(DADOS&&DADOS.restaurante);
+  b.style.display=ok?"flex":"none"; document.body.classList.toggle("com-sacola",!!ok);
+  if(ok) b.innerHTML=`<span><span class="ct">${n}</span>Ver sacola</span><span>${brl(subSacola())}</span>`;
+}
+function abrir(html,depois){
+  const c=document.getElementById("camada");
+  c.innerHTML=`<div class="veu"></div><div class="folha" role="dialog">${html}</div>`;
+  c.querySelector(".veu").onclick=fechar; const f=c.querySelector(".folha"); const x=f.querySelector(".fx"); if(x) x.onclick=fechar;
+  document.body.style.overflow="hidden"; depois&&depois(f);
+}
+function fechar(){ document.getElementById("camada").innerHTML=""; document.body.style.overflow=""; }
+function reRender(){ const y=window.scrollY; render(DADOS); window.scrollTo(0,y); }
+
+function ligarCliques(){
+  document.getElementById("main").addEventListener("click",e=>{
+    const a=e.target.closest("[data-add]"); if(a){ abrirItem(acharItem(a.dataset.add)); return; }
+    const s=e.target.closest("[data-addsec]"); if(s){ abrirLista(DADOS.secoes.find(x=>x.id===s.dataset.addsec)); }
+  });
+  document.getElementById("sacola").onclick=abrirSacola;
+}
+function abrirItem(i){
+  if(!i) return;
+  const precos=(i.precos||[]).map((p,k)=>({...p,k})).filter(p=>p.valor!=null&&p.valor!=="");
+  let idx=precos[0].k, qtd=1;
+  const desenha=()=>{
+    const p=i.precos[idx];
+    abrir(`<button class="fx" aria-label="Fechar">×</button><h2>${esc(i.nome)}</h2><div class="sub">${esc(i.descricao||"")}${i.obs?`<br><span style="color:var(--laranja)">${esc(i.obs)}</span>`:""}</div>
+      ${precos.length>1?`<label class="l">TAMANHO</label><div class="ops" id="oTam">${precos.map(x=>`<button data-k="${x.k}" class="${x.k===idx?"on":""}">${esc(x.rotulo||"Opção")} · ${brl(x.valor)}</button>`).join("")}</div>`:""}
+      <div class="qtd"><button id="oM" aria-label="Menos">−</button><b id="oQ">${qtd}</b><button id="oP" aria-label="Mais">+</button></div>
+      <label class="l">ALGUMA OBSERVAÇÃO?</label><div class="ops" id="oRap" style="margin-bottom:8px">${OBS_RAP.map(o=>`<button>${o}</button>`).join("")}</div>
+      <input class="t" id="oObs" maxlength="120" placeholder="Ex: sem tomate, ponto da carne…">
+      <button class="pri" id="oAdd">Adicionar · ${brl(p.valor*qtd)}</button>`,f=>{
+        const up=()=>{ f.querySelector("#oQ").textContent=qtd; f.querySelector("#oAdd").textContent="Adicionar · "+brl(i.precos[idx].valor*qtd); };
+        f.querySelector("#oM").onclick=()=>{ qtd=Math.max(1,qtd-1); up(); };
+        f.querySelector("#oP").onclick=()=>{ qtd=Math.min(20,qtd+1); up(); };
+        const tam=f.querySelector("#oTam"); if(tam) tam.onclick=e=>{ const b=e.target.closest("[data-k]"); if(!b) return; idx=+b.dataset.k; tam.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); up(); };
+        f.querySelector("#oRap").onclick=e=>{ if(e.target.tagName!=="BUTTON") return; const el=f.querySelector("#oObs"); el.value=el.value?el.value+", "+e.target.textContent.toLowerCase():e.target.textContent; };
+        f.querySelector("#oAdd").onclick=()=>{
+          const obs=f.querySelector("#oObs").value.trim(), p=i.precos[idx];
+          const ch="i:"+i.id+":"+idx+":"+obs, ex=SACOLA.find(x=>x.ch===ch);
+          if(ex) ex.qtd=Math.min(20,ex.qtd+qtd); else SACOLA.push({ch,item_id:i.id,preco_idx:idx,nome:i.nome,rotulo:precos.length>1?(p.rotulo||""):"",preco:+p.valor,qtd,obs});
+          gravar(K_SAC,SACOLA); fechar(); reRender(); try{ navigator.vibrate&&navigator.vibrate(25); }catch(x){}
+        };
+      });
+  };
+  desenha();
+}
+function abrirLista(s){
+  if(!s) return;
+  const L=s.listas||[]; const esc_=L.map(()=>null); let qtd=1;
+  const nomeBase=s.titulo.replace(/s$/i,"");
+  const desenha=()=>{
+    abrir(`<button class="fx" aria-label="Fechar">×</button><h2>${esc(nomeBase)}</h2><div class="sub">${brl(s.preco)} cada${s.nota?" · "+esc(s.nota):""}</div>
+      ${L.map((l,k)=>`<label class="l">${esc(l.titulo.toUpperCase())}</label><div class="ops" data-l="${k}">${(l.opcoes||[]).map(o=>`<button class="${esc_[k]===o?"on":""}">${esc(o)}</button>`).join("")}</div>`).join("")}
+      <div class="qtd"><button id="oM">−</button><b id="oQ">${qtd}</b><button id="oP">+</button></div>
+      <input class="t" id="oObs" maxlength="120" placeholder="Observação (ex: fruta extra, pouco açúcar)">
+      <button class="pri" id="oAdd">Adicionar</button>`,f=>{
+        f.querySelectorAll("[data-l]").forEach(d=>d.onclick=e=>{ if(e.target.tagName!=="BUTTON") return; esc_[+d.dataset.l]=e.target.textContent; d.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===e.target)); });
+        f.querySelector("#oM").onclick=()=>{ qtd=Math.max(1,qtd-1); f.querySelector("#oQ").textContent=qtd; };
+        f.querySelector("#oP").onclick=()=>{ qtd=Math.min(20,qtd+1); f.querySelector("#oQ").textContent=qtd; };
+        f.querySelector("#oAdd").onclick=()=>{
+          const falta=L.findIndex((l,k)=>!esc_[k]); if(falta>=0){ alertaFolha(f,"Escolha: "+L[falta].titulo.toLowerCase()); return; }
+          const obs=f.querySelector("#oObs").value.trim(), nome=nomeBase+" "+esc_.filter(Boolean).join(" · ");
+          const ch="s:"+s.id+":"+nome+":"+obs, ex=SACOLA.find(x=>x.ch===ch);
+          if(ex) ex.qtd=Math.min(20,ex.qtd+qtd); else SACOLA.push({ch,secao_id:s.id,nome,rotulo:"",preco:+s.preco,qtd,obs});
+          gravar(K_SAC,SACOLA); fechar(); reRender();
+        };
+      });
+  };
+  desenha();
+}
+function alertaFolha(f,msg){ let el=f.querySelector(".erro-f"); if(!el){ el=document.createElement("div"); el.className="erro-f"; f.appendChild(el); } el.textContent=msg; el.scrollIntoView({block:"nearest",behavior:"smooth"}); }
+
+function fmtTel(v){ const d=v.replace(/\D/g,"").slice(0,11); if(d.length<=2) return d; if(d.length<=6) return `(${d.slice(0,2)}) ${d.slice(2)}`; if(d.length<=10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`; return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`; }
+function abrirSacola(){
+  const r=DADOS.restaurante, bairros=DADOS.bairros||[];
+  const cli0=ler(K_CLI,{});
+  let tipo=cli0.tipo&&((cli0.tipo==="delivery"&&r.delivery_ativo)||(cli0.tipo==="retirada"&&r.retirada_ativo))?cli0.tipo:(r.delivery_ativo?"delivery":"retirada");
+  let pag=cli0.pag||"", bairro=bairros.some(b=>b.id===cli0.bairro)?cli0.bairro:"";
+  const desenha=()=>{
+    const cli=ler(K_CLI,{});
+    if(!SACOLA.length){ fechar(); barraSacola(); reRender(); return; }
+    const sub=subSacola(), b=bairros.find(x=>x.id===bairro), taxa=tipo==="delivery"&&b?+b.taxa:0, min=+(r.pedido_minimo||0);
+    abrir(`<button class="fx" aria-label="Fechar">×</button><h2>Seu pedido</h2><div class="sub">Confira os itens e preencha os dados</div>
+      ${SACOLA.map((x,k)=>`<div class="lsac"><div class="n"><b>${esc(x.nome)}</b>${x.rotulo?` <small style="display:inline">(${esc(x.rotulo)})</small>`:""}${x.obs?`<small>${esc(x.obs)}</small>`:""}<small>${brl(x.preco*x.qtd)}</small></div>
+        <div class="m"><button data-k="${k}" data-d="-1" aria-label="Menos">−</button><b>${x.qtd}</b><button data-k="${k}" data-d="1" aria-label="Mais">+</button></div></div>`).join("")}
+      <button class="sec" id="sMais" style="margin-top:12px">+ Adicionar mais itens</button>
+
+      <label class="l">COMO VOCÊ QUER RECEBER?</label>
+      <div class="ops" id="sTipo">${r.delivery_ativo?`<button data-v="delivery" class="${tipo==="delivery"?"on":""}">🛵 Entrega</button>`:""}${r.retirada_ativo?`<button data-v="retirada" class="${tipo==="retirada"?"on":""}">🏃 Retirar no balcão</button>`:""}</div>
+      <div class="sub" style="margin:8px 0 0">${tipo==="delivery"?"Tempo estimado: "+esc(r.tempo_entrega||""):"Fica pronto em "+esc(r.tempo_retirada||"")+(r.endereco?" · "+esc(r.endereco):"")}</div>
+
+      <label class="l">SEU NOME</label><input class="t" id="cNome" autocomplete="name" value="${esc(cli.nome||"")}" maxlength="80">
+      <label class="l">TELEFONE / WHATSAPP</label><input class="t" id="cTel" inputmode="tel" autocomplete="tel" value="${esc(fmtTel(cli.tel||""))}" placeholder="(48) 99999-9999">
+      ${tipo==="delivery"?`
+        <label class="l">BAIRRO</label>
+        <select class="t" id="cBairro"><option value="">Escolha o bairro…</option>${bairros.map(x=>`<option value="${x.id}"${x.id===bairro?" selected":""}>${esc(x.nome)} · entrega ${+x.taxa?brl(x.taxa):"grátis"}</option>`).join("")}</select>
+        ${bairros.length?"":`<div class="aviso-f">Nenhum bairro cadastrado para entrega. Escolha retirar no balcão.</div>`}
+        <label class="l">RUA E NÚMERO</label><input class="t" id="cRua" autocomplete="street-address" value="${esc(cli.rua||"")}" placeholder="Ex: Rua das Flores, 123" maxlength="150">
+        <label class="l">COMPLEMENTO / PONTO DE REFERÊNCIA</label><input class="t" id="cComp" value="${esc(cli.comp||"")}" placeholder="Ex: apto 2, perto da praça" maxlength="140">`:""}
+      <label class="l">PAGAMENTO</label>
+      <div class="ops" id="sPag"><button data-v="pix" class="${pag==="pix"?"on":""}">Pix</button><button data-v="dinheiro" class="${pag==="dinheiro"?"on":""}">Dinheiro</button><button data-v="cartao" class="${pag==="cartao"?"on":""}">Cartão ${tipo==="delivery"?"na entrega":"no balcão"}</button></div>
+      ${pag==="dinheiro"?`<label class="l">TROCO PARA QUANTO? (deixe vazio se não precisar)</label><input class="t" id="cTroco" inputmode="decimal" placeholder="Ex: 100">`:""}
+      ${pag==="pix"?`<div class="aviso-f">A chave Pix aparece depois que você enviar o pedido.</div>`:""}
+      <label class="l">OBSERVAÇÃO DO PEDIDO (opcional)</label><input class="t" id="cObs" maxlength="300" placeholder="Ex: interfone não funciona, ligar ao chegar">
+
+      <div style="margin-top:18px">
+        <div class="tot"><span>Subtotal</span><span>${brl(sub)}</span></div>
+        ${tipo==="delivery"?`<div class="tot"><span>Entrega${b?" ("+esc(b.nome)+")":""}</span><span>${b?(taxa?brl(taxa):"grátis"):"escolha o bairro"}</span></div>`:""}
+        <div class="tot g"><span>Total</span><span>${brl(sub+taxa)}</span></div>
+      </div>
+      ${min&&sub<min?`<div class="aviso-f">O pedido mínimo é de ${brl(min)}. Faltam ${brl(min-sub)}.</div>`:""}
+      <button class="pri" id="sEnviar"${min&&sub<min?" disabled":""}>Enviar pedido · ${brl(sub+taxa)}</button>
+      <p style="font-size:12px;color:var(--suave);text-align:center;margin:10px 0 0">Ao enviar, o restaurante recebe seu pedido e confirma em seguida.</p>`,f=>{
+        const guardaCampos=()=>{ const g=id=>{ const el=f.querySelector(id); return el?el.value:undefined; };
+          const c=ler(K_CLI,{}); const n={...c,tipo,pag,bairro, nome:g("#cNome")??c.nome, tel:(g("#cTel")??c.tel??"").replace(/\D/g,""), rua:g("#cRua")??c.rua, comp:g("#cComp")??c.comp}; gravar(K_CLI,n); return n; };
+        f.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{ guardaCampos(); const x=SACOLA[+b.dataset.k]; x.qtd+=+b.dataset.d; if(x.qtd<=0) SACOLA.splice(+b.dataset.k,1); else x.qtd=Math.min(20,x.qtd); gravar(K_SAC,SACOLA); barraSacola(); const y=f.scrollTop; desenha(); const nf=document.querySelector(".folha"); if(nf) nf.scrollTop=y; });
+        f.querySelector("#sMais").onclick=()=>{ guardaCampos(); fechar(); reRender(); };
+        f.querySelector("#sTipo").onclick=e=>{ const b=e.target.closest("[data-v]"); if(!b) return; guardaCampos(); tipo=b.dataset.v; const y=f.scrollTop; desenha(); document.querySelector(".folha").scrollTop=y; };
+        f.querySelector("#sPag").onclick=e=>{ const b=e.target.closest("[data-v]"); if(!b) return; guardaCampos(); pag=b.dataset.v; const y=f.scrollTop; desenha(); document.querySelector(".folha").scrollTop=y; };
+        const sb=f.querySelector("#cBairro"); if(sb) sb.onchange=()=>{ guardaCampos(); bairro=sb.value; const y=f.scrollTop; desenha(); document.querySelector(".folha").scrollTop=y; };
+        const tl=f.querySelector("#cTel"); tl.oninput=()=>{ tl.value=fmtTel(tl.value); };
+        f.querySelector("#sEnviar").onclick=()=>enviarPedido(f,guardaCampos());
+      });
+  };
+  desenha();
+}
+async function enviarPedido(f,c){
+  const r=DADOS.restaurante;
+  if(!c.nome||c.nome.trim().length<2) return alertaFolha(f,"Informe seu nome.");
+  if(!c.tel||c.tel.length<10) return alertaFolha(f,"Informe o telefone com DDD.");
+  if(c.tipo==="delivery"){ if(!c.bairro) return alertaFolha(f,"Escolha o bairro."); if(!c.rua||c.rua.trim().length<5) return alertaFolha(f,"Informe a rua e o número."); }
+  if(!c.pag) return alertaFolha(f,"Escolha a forma de pagamento.");
+  const tr=f.querySelector("#cTroco"), troco=tr&&tr.value.trim()?parseFloat(tr.value.replace(/\./g,"").replace(",",".")):null;
+  const total=subSacola()+(c.tipo==="delivery"?+((DADOS.bairros||[]).find(b=>b.id===c.bairro)||{}).taxa||0:0);
+  if(troco!=null&&(!isFinite(troco)||troco<total)) return alertaFolha(f,`O troco precisa ser para um valor maior que ${brl(total)}.`);
+  const btn=f.querySelector("#sEnviar"); btn.disabled=true; btn.textContent="Enviando…";
+  const corpo={p:{tipo:c.tipo,nome:c.nome.trim(),telefone:c.tel,bairro_id:c.tipo==="delivery"?c.bairro:null,
+    endereco:c.tipo==="delivery"?[c.rua,c.comp].filter(x=>x&&x.trim()).join(" · "):"",pagamento:c.pag,troco_para:troco,obs:(f.querySelector("#cObs")||{}).value||"",
+    itens:SACOLA.map(x=>x.item_id?{item_id:x.item_id,preco_idx:x.preco_idx,qtd:x.qtd,obs:x.obs}:{secao_id:x.secao_id,nome:x.nome,qtd:x.qtd,obs:x.obs})}};
+  try{
+    const resp=await fetch(`${SUPABASE_URL}/rest/v1/rpc/criar_pedido_delivery`,{method:"POST",headers:{apikey:SUPABASE_KEY,"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify(corpo)});
+    const j=await resp.json().catch(()=>({}));
+    if(!resp.ok){ btn.disabled=false; btn.textContent="Tentar enviar de novo"; return alertaFolha(f,j.message||"Não foi possível enviar. Tente de novo."); }
+    const ult={codigo:j.codigo,tel:c.tel,tipo:c.tipo,pag:c.pag,total:j.total,pix_chave:j.pix_chave,pix_nome:j.pix_nome,pix_banco:j.pix_banco,tempo:j.tempo,em:Date.now()};
+    gravar(K_ULT,ult); SACOLA=[]; gravar(K_SAC,SACOLA); barraSacola(); reRender();
+    mostrarConfirmacao(ult,true);
+  }catch(e){ btn.disabled=false; btn.textContent="Tentar enviar de novo"; alertaFolha(f,"Sem conexão. Verifique a internet e tente de novo."); }
+}
+let tAcomp=null;
+function mostrarConfirmacao(u,novo){
+  const r=DADOS.restaurante, tel=String(r.whatsapp||r.telefone||"").replace(/\D/g,"");
+  const msgZap=encodeURIComponent(`Olá! Fiz o pedido ${u.codigo} pelo site${u.pag==="pix"?" e estou enviando o comprovante do Pix":""}.`);
+  abrir(`<button class="fx" aria-label="Fechar">×</button><h2>${novo?"Pedido enviado! 🎉":"Seu pedido"}</h2>
+    <div class="sub">Guarde o código para acompanhar:</div><div class="codigo">${esc(u.codigo)}</div>
+    <div class="tot g" style="margin-top:0"><span>Total</span><span>${brl(u.total)}</span></div>
+    ${u.pag==="pix"?`<div class="pix">Pague com Pix para a chave:<b id="pChave">${esc(u.pix_chave||"(chave não cadastrada: combine pelo WhatsApp)")}</b>${u.pix_nome?`<div style="font-size:13px;color:var(--suave)">${esc(u.pix_nome)}${u.pix_banco?" · "+esc(u.pix_banco):""}</div>`:""}
+      ${u.pix_chave?`<button class="sec" id="pCopiar">Copiar chave Pix</button>`:""}</div>`:""}
+    ${tel?`<a class="pri" style="text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/55${tel}?text=${msgZap}">${u.pag==="pix"?"Enviar comprovante no WhatsApp":"Falar com o restaurante"}</a>`:""}
+    <ul class="etapas" id="etapas"><li class="atual">Pedido enviado</li></ul>
+    <div class="sub" id="eInfo" style="text-align:center">Tempo estimado: ${esc(u.tempo||"")}</div>
+    <button class="sec" id="eFechar">Voltar ao cardápio</button>`,f=>{
+      f.querySelector("#eFechar").onclick=fechar;
+      const cp=f.querySelector("#pCopiar"); if(cp) cp.onclick=async()=>{ try{ await navigator.clipboard.writeText(u.pix_chave); cp.textContent="Chave copiada ✓"; }catch(e){ const rg=document.createRange(); rg.selectNodeContents(f.querySelector("#pChave")); getSelection().removeAllRanges(); getSelection().addRange(rg); cp.textContent="Selecionada: copie"; } };
+      atualizarAcomp(u);
+    });
+  clearInterval(tAcomp); tAcomp=setInterval(()=>{ if(document.getElementById("etapas")) atualizarAcomp(u); else clearInterval(tAcomp); },20000);
+}
+async function atualizarAcomp(u){
+  try{
+    const resp=await fetch(`${SUPABASE_URL}/rest/v1/rpc/acompanhar_pedido`,{method:"POST",headers:{apikey:SUPABASE_KEY,"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({p_codigo:u.codigo,p_telefone:u.tel})});
+    const a=await resp.json(); const el=document.getElementById("etapas"); if(!a||!el) return;
+    if(a.etapa==="cancelado"){ el.innerHTML=`<li class="atual" style="color:#ff9a8f">Pedido cancelado${a.motivo?": "+esc(a.motivo):""}</li>`; document.getElementById("eInfo").textContent="Em caso de dúvida, fale com o restaurante."; return; }
+    const ent=a.tipo==="delivery";
+    const passos=[["recebido","Pedido recebido"],["aceito","Confirmado pelo restaurante"],["preparo","Em preparo"],[ent?"saiu":"pronto",ent?"Saiu para entrega":"Pronto para retirar"],["entregue",ent?"Entregue":"Retirado"]];
+    let atual=0;
+    if(a.etapa==="aceito") atual=a.cozinha==="pronto"?3:(a.cozinha==="preparo"?2:1);
+    if(a.etapa==="saiu") atual=3; if(a.etapa==="entregue") atual=4;
+    el.innerHTML=passos.map((p,k)=>`<li class="${k<atual?"ok":k===atual?"atual":""}">${p[1]}</li>`).join("")+(a.forma_pagamento==="pix"?`<li class="${a.pagamento_status==="pago"?"ok":""}">${a.pagamento_status==="pago"?"Pix confirmado ✓":"Aguardando confirmação do Pix"}</li>`:"");
+    if(a.etapa==="entregue"){ clearInterval(tAcomp); document.getElementById("eInfo").textContent="Obrigado pela preferência! 🍔"; }
+  }catch(e){}
+}
+function mostrarAcompanhar(){
+  const u=ler(K_ULT,null), box=document.getElementById("acomp");
+  if(!u||Date.now()-u.em>12*3600e3){ box.innerHTML=""; return; }
+  box.innerHTML=`<div class="acomp"><button id="bAcomp">📦 Acompanhar meu pedido ${esc(u.codigo)}</button></div>`;
+  document.getElementById("bAcomp").onclick=()=>mostrarConfirmacao(u,false);
 }
 iniciar();
 </script>
